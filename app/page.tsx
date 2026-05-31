@@ -47,8 +47,7 @@ export default function Home() {
             value={selected}
             onChange={handleSelect}
             disabled={loading}
-            className="w-full bg-[#1a1a1a] border border-gray-700 text-white rounded-lg px-4 py-3 text-base focus:outline-none focus:border-blue-500 disabled:opacity-50 cursor-pointer"
-            style={{ fontFamily: 'inherit' }}
+            className="w-full bg-[#1a1a1a] border border-gray-700 text-white rounded-lg px-4 py-3 text-base focus:outline-none focus:border-blue-500 disabled:opacity-50 cursor-pointer font-sans"
           >
             <option value="">{loading ? t.loading : t.selectPlaceholder}</option>
             {groupsets.map((g) => (

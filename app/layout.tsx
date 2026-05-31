@@ -4,7 +4,7 @@ import "./globals.css";
 import { LanguageProvider } from "@/context/language";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
   title: "Bike Compatibility Checker",
@@ -17,7 +17,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={inter.variable}>
       <body className={`${inter.className} antialiased bg-[#0a0a0a] text-white`}>
         <LanguageProvider>
           <LanguageSwitcher />

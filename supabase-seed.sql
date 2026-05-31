@@ -74,36 +74,36 @@ insert into compatibility_rules (groupset_a_id, groupset_b_id, status, note) val
 
 -- Shimano 105 R7000 (11-speed)
 insert into components (groupset_id, category, name, model_number, price_eur, affiliate_url) values
-  (1, 'cassette',        'Shimano 105 Cassette 11-28T',        'CS-R7000-11',  42.90, 'https://www.bike-components.de/search/?q=CS-R7000-11'),
-  (1, 'chain',           'Shimano 105 Chain 11-speed',          'CN-HG601-11',  22.50, 'https://www.bike-components.de/search/?q=CN-HG601-11'),
-  (1, 'rear_derailleur', 'Shimano 105 Rear Derailleur SS',      'RD-R7000-SS',  59.90, 'https://www.bike-components.de/search/?q=RD-R7000-SS');
+  (1, 'cassette',        'Shimano 105 Cassette 11-28T',        'CS-R7000-11',  42.90, 'https://www.bike-components.de/de/s/?keywords=CS-R7000-11'),
+  (1, 'chain',           'Shimano 105 Chain 11-speed',          'CN-HG601-11',  22.50, 'https://www.bike-components.de/de/s/?keywords=CN-HG601-11'),
+  (1, 'rear_derailleur', 'Shimano 105 Rear Derailleur SS',      'RD-R7000-SS',  59.90, 'https://www.bike-components.de/de/s/?keywords=RD-R7000-SS');
 
 -- Shimano Ultegra R8000 (11-speed)
 insert into components (groupset_id, category, name, model_number, price_eur, affiliate_url) values
-  (2, 'cassette',        'Shimano Ultegra Cassette 11-28T',     'CS-R8000-11',  69.90, 'https://www.bike-components.de/search/?q=CS-R8000-11'),
-  (2, 'chain',           'Shimano Ultegra Chain 11-speed',       'CN-HG701-11',  34.90, 'https://www.bike-components.de/search/?q=CN-HG701-11'),
-  (2, 'rear_derailleur', 'Shimano Ultegra Rear Derailleur SS',   'RD-R8000-SS',  94.90, 'https://www.bike-components.de/search/?q=RD-R8000-SS');
+  (2, 'cassette',        'Shimano Ultegra Cassette 11-28T',     'CS-R8000-11',  69.90, 'https://www.bike-components.de/de/s/?keywords=CS-R8000-11'),
+  (2, 'chain',           'Shimano Ultegra Chain 11-speed',       'CN-HG701-11',  34.90, 'https://www.bike-components.de/de/s/?keywords=CN-HG701-11'),
+  (2, 'rear_derailleur', 'Shimano Ultegra Rear Derailleur SS',   'RD-R8000-SS',  94.90, 'https://www.bike-components.de/de/s/?keywords=RD-R8000-SS');
 
 -- Shimano Dura-Ace R9100 (11-speed)
 insert into components (groupset_id, category, name, model_number, price_eur, affiliate_url) values
-  (3, 'cassette',        'Shimano Dura-Ace Cassette 11-28T',    'CS-R9100-11',  239.90, 'https://www.bike-components.de/search/?q=CS-R9100-11'),
-  (3, 'chain',           'Shimano Dura-Ace Chain 11-speed',      'CN-HG901-11',   49.90, 'https://www.bike-components.de/search/?q=CN-HG901-11'),
-  (3, 'rear_derailleur', 'Shimano Dura-Ace Rear Derailleur SS',  'RD-R9100-SS',  249.90, 'https://www.bike-components.de/search/?q=RD-R9100-SS');
+  (3, 'cassette',        'Shimano Dura-Ace Cassette 11-28T',    'CS-R9100-11',  239.90, 'https://www.bike-components.de/de/s/?keywords=CS-R9100-11'),
+  (3, 'chain',           'Shimano Dura-Ace Chain 11-speed',      'CN-HG901-11',   49.90, 'https://www.bike-components.de/de/s/?keywords=CN-HG901-11'),
+  (3, 'rear_derailleur', 'Shimano Dura-Ace Rear Derailleur SS',  'RD-R9100-SS',  249.90, 'https://www.bike-components.de/de/s/?keywords=RD-R9100-SS');
 
 -- Shimano 105 R7100 (12-speed)
 insert into components (groupset_id, category, name, model_number, price_eur, affiliate_url) values
-  (4, 'cassette',        'Shimano 105 Cassette 11-34T',         'CS-R7100-12',   54.90, 'https://www.bike-components.de/search/?q=CS-R7100-12'),
-  (4, 'chain',           'Shimano 105 Chain 12-speed',           'CN-M7100-12',   29.90, 'https://www.bike-components.de/search/?q=CN-M7100-12'),
-  (4, 'rear_derailleur', 'Shimano 105 Rear Derailleur Di2',      'RD-R7150-D',   159.90, 'https://www.bike-components.de/search/?q=RD-R7150-D');
+  (4, 'cassette',        'Shimano 105 Cassette 11-34T',         'CS-R7100-12',   54.90, 'https://www.bike-components.de/de/s/?keywords=CS-R7100-12'),
+  (4, 'chain',           'Shimano 105 Chain 12-speed',           'CN-M7100-12',   29.90, 'https://www.bike-components.de/de/s/?keywords=CN-M7100-12'),
+  (4, 'rear_derailleur', 'Shimano 105 Rear Derailleur Di2',      'RD-R7150-D',   159.90, 'https://www.bike-components.de/de/s/?keywords=RD-R7150-D');
 
 -- Shimano Ultegra R8100 (12-speed)
 insert into components (groupset_id, category, name, model_number, price_eur, affiliate_url) values
-  (5, 'cassette',        'Shimano Ultegra Cassette 11-34T',     'CS-R8100-12',   79.90, 'https://www.bike-components.de/search/?q=CS-R8100-12'),
-  (5, 'chain',           'Shimano Ultegra Chain 12-speed',       'CN-M8100-12',   44.90, 'https://www.bike-components.de/search/?q=CN-M8100-12'),
-  (5, 'rear_derailleur', 'Shimano Ultegra Rear Derailleur Di2',  'RD-R8150-D',   239.90, 'https://www.bike-components.de/search/?q=RD-R8150-D');
+  (5, 'cassette',        'Shimano Ultegra Cassette 11-34T',     'CS-R8100-12',   79.90, 'https://www.bike-components.de/de/s/?keywords=CS-R8100-12'),
+  (5, 'chain',           'Shimano Ultegra Chain 12-speed',       'CN-M8100-12',   44.90, 'https://www.bike-components.de/de/s/?keywords=CN-M8100-12'),
+  (5, 'rear_derailleur', 'Shimano Ultegra Rear Derailleur Di2',  'RD-R8150-D',   239.90, 'https://www.bike-components.de/de/s/?keywords=RD-R8150-D');
 
 -- Shimano Dura-Ace R9200 (12-speed)
 insert into components (groupset_id, category, name, model_number, price_eur, affiliate_url) values
-  (6, 'cassette',        'Shimano Dura-Ace Cassette 11-30T',    'CS-R9200-12',  299.90, 'https://www.bike-components.de/search/?q=CS-R9200-12'),
-  (6, 'chain',           'Shimano Dura-Ace Chain 12-speed',      'CN-M9100-12',   64.90, 'https://www.bike-components.de/search/?q=CN-M9100-12'),
-  (6, 'rear_derailleur', 'Shimano Dura-Ace Rear Derailleur Di2', 'RD-R9250-D',   499.90, 'https://www.bike-components.de/search/?q=RD-R9250-D');
+  (6, 'cassette',        'Shimano Dura-Ace Cassette 11-30T',    'CS-R9200-12',  299.90, 'https://www.bike-components.de/de/s/?keywords=CS-R9200-12'),
+  (6, 'chain',           'Shimano Dura-Ace Chain 12-speed',      'CN-M9100-12',   64.90, 'https://www.bike-components.de/de/s/?keywords=CN-M9100-12'),
+  (6, 'rear_derailleur', 'Shimano Dura-Ace Rear Derailleur Di2', 'RD-R9250-D',   499.90, 'https://www.bike-components.de/de/s/?keywords=RD-R9250-D');
