@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { getSupabase, type Groupset, type Component, type CompatibilityRule } from '@/lib/supabase'
 import { Suspense } from 'react'
+import { useLang } from '@/context/language'
 
 type GroupsetWithComponents = Groupset & {
   components: Component[]
@@ -14,6 +15,7 @@ type GroupsetWithComponents = Groupset & {
 function CheckPageInner() {
   const searchParams = useSearchParams()
   const router = useRouter()
+  const { t } = useLang()
   const groupsetId = searchParams.get('groupset')
 
   const [currentGroupset, setCurrentGroupset] = useState<Groupset | null>(null)
@@ -91,7 +93,7 @@ function CheckPageInner() {
   if (loading) {
     return (
       <main className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-400">Loading...</p>
+        <p className="text-gray-400">{t.loading}</p>
       </main>
     )
   }
@@ -103,18 +105,18 @@ function CheckPageInner() {
           onClick={() => router.push('/')}
           className="text-sm text-gray-400 hover:text-white mb-6 inline-block"
         >
-          ← Back
+          {t.back}
         </button>
         <h1 className="text-3xl font-bold">{currentGroupset?.name}</h1>
-        <p className="text-gray-400 mt-1">{currentGroupset?.speeds}-speed · {currentGroupset?.generation}</p>
+        <p className="text-gray-400 mt-1">{currentGroupset && t.speed(currentGroupset.speeds)} · {currentGroupset?.generation}</p>
       </div>
 
       {compatible.length > 0 && (
         <section>
-          <h2 className="text-xl font-semibold text-green-400 mb-4">Compatible Groupsets</h2>
+          <h2 className="text-xl font-semibold text-green-400 mb-4">{t.compatibleHeading}</h2>
           <div className="space-y-4">
             {compatible.map((g) => (
-              <GroupsetCard key={g.id} groupset={g} variant="compatible" />
+              <GroupsetCard key={g.id} groupset={g} variant="compatible" t={t} />
             ))}
           </div>
         </section>
@@ -122,10 +124,10 @@ function CheckPageInner() {
 
       {incompatible.length > 0 && (
         <section>
-          <h2 className="text-xl font-semibold text-red-400 mb-4">Incompatible Groupsets</h2>
+          <h2 className="text-xl font-semibold text-red-400 mb-4">{t.incompatibleHeading}</h2>
           <div className="space-y-4">
             {incompatible.map((g) => (
-              <GroupsetCard key={g.id} groupset={g} variant="incompatible" />
+              <GroupsetCard key={g.id} groupset={g} variant="incompatible" t={t} />
             ))}
           </div>
         </section>
@@ -137,22 +139,24 @@ function CheckPageInner() {
 function GroupsetCard({
   groupset,
   variant,
+  t,
 }: {
   groupset: GroupsetWithComponents
   variant: 'compatible' | 'incompatible'
+  t: import('@/lib/i18n').T
 }) {
   const borderColor = variant === 'compatible' ? 'border-green-800' : 'border-red-900'
   const badgeBg = variant === 'compatible' ? 'bg-green-900/50 text-green-300' : 'bg-red-900/50 text-red-300'
   const badgeText = variant === 'compatible'
-    ? groupset.status === 'adapter' ? 'Needs Adapter' : 'Compatible'
-    : 'Incompatible'
+    ? groupset.status === 'adapter' ? t.needsAdapter : t.compatible
+    : t.incompatible
 
   return (
     <div className={`rounded-xl border ${borderColor} bg-[#111] p-5 space-y-4`}>
       <div className="flex items-start justify-between gap-4">
         <div>
           <h3 className="font-semibold text-lg">{groupset.name}</h3>
-          <p className="text-gray-400 text-sm">{groupset.speeds}-speed · {groupset.generation}</p>
+          <p className="text-gray-400 text-sm">{t.speed(groupset.speeds)} · {groupset.generation}</p>
           {groupset.note && <p className="text-gray-400 text-sm mt-1">{groupset.note}</p>}
         </div>
         <span className={`text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap ${badgeBg}`}>
@@ -185,7 +189,7 @@ function GroupsetCard({
                     rel="noopener noreferrer"
                     className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
                   >
-                    Buy
+                    {t.buy}
                   </a>
                 )}
               </div>

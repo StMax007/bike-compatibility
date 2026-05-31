@@ -3,9 +3,11 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { getSupabase, type Groupset } from '@/lib/supabase'
+import { useLang } from '@/context/language'
 
 export default function Home() {
   const router = useRouter()
+  const { t } = useLang()
   const [groupsets, setGroupsets] = useState<Groupset[]>([])
   const [selected, setSelected] = useState('')
   const [loading, setLoading] = useState(true)
@@ -31,12 +33,12 @@ export default function Home() {
     <main className="min-h-screen flex flex-col items-center justify-center px-4">
       <div className="max-w-xl w-full text-center space-y-8">
         <div className="space-y-3">
-          <p className="text-blue-400 text-sm font-medium tracking-widest uppercase">Shimano Road</p>
+          <p className="text-blue-400 text-sm font-medium tracking-widest uppercase">{t.badge}</p>
           <h1 className="text-4xl sm:text-5xl font-bold leading-tight">
-            Find out if your bike parts are compatible
+            {t.headline}
           </h1>
           <p className="text-gray-400 text-lg">
-            Select your groupset to check compatibility with other Shimano road components.
+            {t.subtitle}
           </p>
         </div>
 
@@ -47,10 +49,10 @@ export default function Home() {
             disabled={loading}
             className="w-full bg-[#1a1a1a] border border-gray-700 text-white rounded-lg px-4 py-3 text-base focus:outline-none focus:border-blue-500 disabled:opacity-50 cursor-pointer"
           >
-            <option value="">{loading ? 'Loading...' : 'Select your groupset'}</option>
+            <option value="">{loading ? t.loading : t.selectPlaceholder}</option>
             {groupsets.map((g) => (
               <option key={g.id} value={g.id}>
-                {g.name} ({g.speeds}-speed)
+                {g.name} ({t.speed(g.speeds)})
               </option>
             ))}
           </select>
