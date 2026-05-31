@@ -9,6 +9,7 @@ import {
   type Component,
   type CompatibilityRule,
   type CompatibilityParameters,
+  type Source,
   CATEGORY_ORDER,
   CATEGORY_LABELS,
 } from '@/lib/supabase'
@@ -30,6 +31,89 @@ type CategoryData = {
   components: EnrichedComponent[]
 }
 
+type CompatibleGroup = {
+  groupsets: Groupset[]
+  explanation: string | null
+  sources: Source[]
+}
+
+// Why two groupsets from different brands/speeds are incompatible
+function getIncompatReason(selected: Groupset, others: Groupset[]): IncompatGroup[] {
+  const groups: IncompatGroup[] = []
+
+  // Same-brand, different speed
+  const sameBrandDiffSpeed = others.filter(
+    (g) => g.brand === selected.brand && g.speeds !== selected.speeds
+  )
+  if (sameBrandDiffSpeed.length) {
+    const otherSpeed = sameBrandDiffSpeed[0].speeds
+    groups.push({
+      groupsets: sameBrandDiffSpeed,
+      reason: `${selected.brand} ${selected.speeds}s and ${otherSpeed}s are incompatible`,
+      detail: `Sprocket pitch differs: ${selected.speeds}-speed uses ~${selected.speeds === 11 ? '3.95' : '3.58'} mm, ${otherSpeed}-speed uses ~${otherSpeed === 11 ? '3.95' : '3.58'} mm. Chains, cassettes, and derailleurs are not interchangeable between speeds.`,
+      sources: [
+        { label: 'Shimano 2024–2025 Compatibility Chart', url: 'https://productinfo.shimano.com/pdfs/product/archive/2024-2025_Compatibility_v032_en.pdf' },
+        { label: 'Gear-changing Dimensions (Wikibooks)', url: 'https://en.wikibooks.org/wiki/Bicycles/Maintenance_and_Repair/Gear-changing_Dimensions' },
+      ],
+    })
+  }
+
+  // Cross-brand
+  const brandOrder = ['Shimano', 'SRAM', 'Campagnolo']
+  const otherBrands = brandOrder.filter((b) => b !== selected.brand)
+  for (const brand of otherBrands) {
+    const brandGroupsets = others.filter((g) => g.brand === brand)
+    if (!brandGroupsets.length) continue
+
+    const detail = getCrossBrandDetail(selected.brand, brand)
+    groups.push({
+      groupsets: brandGroupsets,
+      reason: `${selected.brand} and ${brand} are not compatible`,
+      detail: detail.text,
+      sources: detail.sources,
+    })
+  }
+
+  return groups
+}
+
+type IncompatGroup = {
+  groupsets: Groupset[]
+  reason: string
+  detail: string
+  sources: { label: string; url: string }[]
+}
+
+function getCrossBrandDetail(brandA: string, brandB: string) {
+  const pairs: Record<string, { text: string; sources: { label: string; url: string }[] }> = {
+    'Shimano|SRAM': {
+      text: 'Shimano and SRAM use different cable pull ratios for mechanical systems (~2.7 mm vs a different DoubleTap actuation ratio). Electronic systems (Di2 vs AXS) use incompatible wireless protocols. Mixing results in inaccurate or non-functional shifting.',
+      sources: [
+        { label: 'Derailleur compatibility – cable pull ratios (BikeGremlin)', url: 'https://bike.bikegremlin.com/1278/bicycle-rear-derailleur-compatibility/' },
+        { label: 'Gear-changing Dimensions (Wikibooks)', url: 'https://en.wikibooks.org/wiki/Bicycles/Maintenance_and_Repair/Gear-changing_Dimensions' },
+      ],
+    },
+    'Shimano|Campagnolo': {
+      text: 'Shimano road uses ~2.7 mm cable pull per shift; Campagnolo Ergopower uses ~2.6 mm with a different lever geometry. Although the values are close, the shift ratios are incompatible and will cause missed or double-shifts.',
+      sources: [
+        { label: 'Derailleur compatibility – cable pull ratios (BikeGremlin)', url: 'https://bike.bikegremlin.com/1278/bicycle-rear-derailleur-compatibility/' },
+        { label: 'Gear-changing Dimensions (Wikibooks)', url: 'https://en.wikibooks.org/wiki/Bicycles/Maintenance_and_Repair/Gear-changing_Dimensions' },
+      ],
+    },
+    'SRAM|Campagnolo': {
+      text: 'SRAM DoubleTap and Campagnolo Ergopower use fundamentally different actuation mechanisms and cable pull values. They cannot be mixed.',
+      sources: [
+        { label: 'Derailleur compatibility – cable pull ratios (BikeGremlin)', url: 'https://bike.bikegremlin.com/1278/bicycle-rear-derailleur-compatibility/' },
+      ],
+    },
+  }
+  const key = [brandA, brandB].sort().join('|')
+  return pairs[key] ?? {
+    text: 'Different brand ecosystems use incompatible cable pull ratios and/or electronic protocols.',
+    sources: [],
+  }
+}
+
 function statusOrder(s: ResolvedStatus) {
   return { native: 0, compatible: 1, adapter: 2, incompatible: 3 }[s]
 }
@@ -43,9 +127,11 @@ function CheckPageInner() {
   const [currentGroupset, setCurrentGroupset] = useState<Groupset | null>(null)
   const [categories, setCategories] = useState<CategoryData[]>([])
   const [params, setParams] = useState<CompatibilityParameters | null>(null)
-  const [incompatibleGroupsets, setIncompatibleGroupsets] = useState<Groupset[]>([])
+  const [compatGroups, setCompatGroups] = useState<CompatibleGroup[]>([])
+  const [incompatGroups, setIncompatGroups] = useState<IncompatGroup[]>([])
   const [loading, setLoading] = useState(true)
   const [activeCategory, setActiveCategory] = useState<string>('all')
+  const [sourcesOpen, setSourcesOpen] = useState(false)
 
   useEffect(() => {
     if (!groupsetId) { router.push('/'); return }
@@ -57,11 +143,13 @@ function CheckPageInner() {
         { data: rulesRaw },
         { data: componentsRaw },
         { data: paramsRaw },
+        { data: ruleSourcesRaw },
       ] = await Promise.all([
         sb.from('groupsets').select('*'),
         sb.from('compatibility_rules').select('*'),
         sb.from('components').select('*'),
         sb.from('compatibility_parameters').select('*').eq('groupset_id', Number(groupsetId)).single(),
+        sb.from('rule_sources').select('rule_id, sources(*)'),
       ])
 
       if (!groupsetsRaw || !componentsRaw) return
@@ -76,32 +164,58 @@ function CheckPageInner() {
       setCurrentGroupset(current)
       if (paramsRaw) setParams(paramsRaw as CompatibilityParameters)
 
-      const compatMap = new Map<number, { status: 'compatible' | 'adapter'; explanation: string | null }>()
-      for (const rule of rules) {
-        if (rule.groupset_a_id === Number(groupsetId))
-          compatMap.set(rule.groupset_b_id, { status: rule.status as 'compatible' | 'adapter', explanation: rule.explanation })
-        if (rule.groupset_b_id === Number(groupsetId))
-          compatMap.set(rule.groupset_a_id, { status: rule.status as 'compatible' | 'adapter', explanation: rule.explanation })
+      // Build source map: rule_id → Source[]
+      const sourcesByRule = new Map<number, Source[]>()
+      if (ruleSourcesRaw) {
+        for (const rs of ruleSourcesRaw as { rule_id: number; sources: Source }[]) {
+          if (!rs.sources) continue
+          if (!sourcesByRule.has(rs.rule_id)) sourcesByRule.set(rs.rule_id, [])
+          sourcesByRule.get(rs.rule_id)!.push(rs.sources)
+        }
       }
 
+      // Build compatMap: groupset_id → {rule, sources}
+      const compatMap = new Map<number, { rule: CompatibilityRule; sources: Source[] }>()
+      for (const rule of rules) {
+        const otherId = rule.groupset_a_id === Number(groupsetId)
+          ? rule.groupset_b_id
+          : rule.groupset_a_id
+        if (rule.groupset_a_id === Number(groupsetId) || rule.groupset_b_id === Number(groupsetId)) {
+          compatMap.set(otherId, {
+            rule,
+            sources: sourcesByRule.get(rule.id) ?? [],
+          })
+        }
+      }
+
+      // Group compatible groupsets by shared explanation
+      const compatGroupMap = new Map<string, { groupsets: Groupset[]; explanation: string | null; sources: Source[] }>()
+      for (const [gId, { rule, sources }] of Array.from(compatMap.entries())) {
+        const g = groupsets.find((x) => x.id === gId)
+        if (!g) continue
+        const key = rule.explanation ?? '__compat__'
+        if (!compatGroupMap.has(key)) {
+          compatGroupMap.set(key, { groupsets: [], explanation: rule.explanation, sources })
+        }
+        compatGroupMap.get(key)!.groupsets.push(g)
+      }
+      setCompatGroups(Array.from(compatGroupMap.values()))
+
+      // Component categories
       const categoryMap = new Map<string, EnrichedComponent[]>()
       for (const comp of components) {
         const g = groupsets.find((x) => x.id === comp.groupset_id)
         if (!g) continue
-
         let status: ResolvedStatus
         let explanation: string | null = null
-
         if (comp.groupset_id === Number(groupsetId)) {
           status = 'native'
         } else {
-          const rule = compatMap.get(comp.groupset_id)
-          if (rule) { status = rule.status; explanation = rule.explanation }
+          const entry = compatMap.get(comp.groupset_id)
+          if (entry) { status = entry.rule.status as 'compatible' | 'adapter'; explanation = entry.rule.explanation }
           else { status = 'incompatible' }
         }
-
         if (status === 'incompatible') continue
-
         if (!categoryMap.has(comp.category)) categoryMap.set(comp.category, [])
         categoryMap.get(comp.category)!.push({ ...comp, groupsetName: g.name, groupsetBrand: g.brand, status, explanation })
       }
@@ -110,9 +224,11 @@ function CheckPageInner() {
         category: c,
         components: categoryMap.get(c)!.sort((a, b) => statusOrder(a.status) - statusOrder(b.status)),
       }))
-
       setCategories(catList)
-      setIncompatibleGroupsets(groupsets.filter((g) => g.id !== Number(groupsetId) && !compatMap.has(g.id)))
+
+      // Incompatible groupsets grouped by reason
+      const incompatible = groupsets.filter((g) => g.id !== Number(groupsetId) && !compatMap.has(g.id))
+      setIncompatGroups(getIncompatReason(current, incompatible))
       setLoading(false)
     }
 
@@ -127,7 +243,9 @@ function CheckPageInner() {
     )
   }
 
-  const displayCategories = activeCategory === 'all' ? categories : categories.filter((c) => c.category === activeCategory)
+  const displayCategories = activeCategory === 'all'
+    ? categories
+    : categories.filter((c) => c.category === activeCategory)
 
   return (
     <main className="min-h-screen px-4 py-10 max-w-4xl mx-auto">
@@ -160,13 +278,53 @@ function CheckPageInner() {
               )}
               {params.sprocket_pitch_mm && (
                 <span className="border border-gray-200 dark:border-gray-700 rounded-full px-2.5 py-1 bg-white dark:bg-transparent">
-                  {params.sprocket_pitch_mm}mm pitch
+                  {params.sprocket_pitch_mm} mm pitch
                 </span>
               )}
             </div>
           )}
         </div>
       </div>
+
+      {/* ── Compatibility Proof section ── */}
+      {compatGroups.length > 0 && (
+        <div className="mb-8 border border-green-200 dark:border-green-900/50 rounded-xl overflow-hidden">
+          <button
+            onClick={() => setSourcesOpen((o) => !o)}
+            className="w-full flex items-center justify-between px-5 py-3.5 bg-green-50 dark:bg-green-950/30 text-left"
+          >
+            <span className="text-sm font-semibold text-green-800 dark:text-green-300 flex items-center gap-2">
+              <span>📄</span> Why are these parts compatible? — Sources & proof
+            </span>
+            <span className="text-green-600 dark:text-green-400 text-xs font-medium">
+              {sourcesOpen ? 'Hide ▲' : 'Show ▼'}
+            </span>
+          </button>
+
+          {sourcesOpen && (
+            <div className="px-5 py-4 bg-white dark:bg-[#0d1a0d] space-y-5 divide-y divide-gray-100 dark:divide-gray-800">
+              {compatGroups.map((group, i) => (
+                <div key={i} className={i > 0 ? 'pt-4' : ''}>
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                    ✓ Compatible with:{' '}
+                    {group.groupsets.map((g) => g.name).join(', ')}
+                  </p>
+                  {group.explanation && (
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">{group.explanation}</p>
+                  )}
+                  {group.sources.length > 0 && (
+                    <div className="space-y-2">
+                      {group.sources.map((src) => (
+                        <SourceCard key={src.id} source={src} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Category filter tabs */}
       {categories.length > 1 && (
@@ -204,25 +362,116 @@ function CheckPageInner() {
         ))}
       </div>
 
-      {/* Incompatible summary */}
-      {incompatibleGroupsets.length > 0 && (
-        <section className="mt-12 border border-gray-200 dark:border-gray-800 rounded-xl p-5 bg-white dark:bg-transparent">
-          <h2 className="font-semibold text-gray-400 dark:text-gray-500 mb-3 text-sm uppercase tracking-wider">
+      {/* ── Incompatible section with reasons + sources ── */}
+      {incompatGroups.length > 0 && (
+        <section className="mt-12 space-y-4">
+          <h2 className="font-semibold text-gray-400 dark:text-gray-500 text-sm uppercase tracking-wider">
             {t.incompatibleSummaryHeading}
           </h2>
-          <p className="text-gray-500 dark:text-gray-500 text-sm mb-4">{t.incompatibleSummaryNote}</p>
-          <div className="flex flex-wrap gap-2">
-            {incompatibleGroupsets.map((g) => (
-              <span key={g.id} className="text-xs border border-gray-200 dark:border-gray-800 rounded-full px-3 py-1 text-gray-400 dark:text-gray-500">
-                {g.name}
-              </span>
-            ))}
-          </div>
+          {incompatGroups.map((group, i) => (
+            <IncompatGroupCard key={i} group={group} />
+          ))}
         </section>
       )}
 
       <p className="text-xs text-gray-400 dark:text-gray-600 mt-10 text-center">{t.affiliateDisclaimer}</p>
     </main>
+  )
+}
+
+function SourceCard({ source }: { source: Source }) {
+  const docTypeLabel: Record<string, string> = {
+    dealer_manual: 'Dealer Manual',
+    compatibility_chart: 'Official Compatibility Chart',
+    support_article: 'Official Support Article',
+    reference: 'Technical Reference',
+  }
+
+  return (
+    <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-3 bg-gray-50 dark:bg-[#111]">
+      <div className="flex items-start justify-between gap-3 mb-1.5">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-semibold text-gray-900 dark:text-white">{source.title}</span>
+            <span className="text-xs px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 shrink-0">
+              {docTypeLabel[source.doc_type] ?? source.doc_type}
+            </span>
+          </div>
+          <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+            {source.publisher}{source.page_ref ? ` · ${source.page_ref}` : ''}
+          </div>
+        </div>
+        {source.url && (
+          <a
+            href={source.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-500 whitespace-nowrap shrink-0 font-medium"
+          >
+            View ↗
+          </a>
+        )}
+      </div>
+      {source.excerpt && (
+        <blockquote className={`text-xs mt-2 pl-3 ${
+          source.is_direct_quote
+            ? 'border-l-2 border-green-400 text-gray-600 dark:text-gray-300 italic'
+            : 'border-l-2 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400'
+        }`}>
+          {source.is_direct_quote ? `"${source.excerpt}"` : source.excerpt}
+          {source.is_direct_quote && (
+            <span className="not-italic ml-1.5 text-green-600 dark:text-green-400 font-medium text-[10px] uppercase tracking-wide">direct quote</span>
+          )}
+        </blockquote>
+      )}
+    </div>
+  )
+}
+
+function IncompatGroupCard({ group }: { group: IncompatGroup }) {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <div className="border border-red-100 dark:border-red-900/30 rounded-xl overflow-hidden">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-start justify-between gap-4 px-5 py-3.5 bg-red-50/50 dark:bg-red-950/20 text-left"
+      >
+        <div>
+          <p className="text-sm font-medium text-red-700 dark:text-red-400">{group.reason}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">
+            {group.groupsets.slice(0, 4).map((g) => g.name).join(', ')}
+            {group.groupsets.length > 4 ? ` +${group.groupsets.length - 4} more` : ''}
+          </p>
+        </div>
+        <span className="text-gray-400 dark:text-gray-500 text-xs whitespace-nowrap shrink-0 mt-0.5">
+          {open ? 'Hide ▲' : 'Why? ▼'}
+        </span>
+      </button>
+
+      {open && (
+        <div className="px-5 py-4 bg-white dark:bg-[#1a0d0d] space-y-3">
+          <p className="text-sm text-gray-600 dark:text-gray-300">{group.detail}</p>
+          {group.sources.length > 0 && (
+            <div className="space-y-2 pt-1">
+              {group.sources.map((src) => (
+                <a
+                  key={src.url}
+                  href={src.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400 hover:text-blue-500 group"
+                >
+                  <span className="text-gray-400">📄</span>
+                  <span className="group-hover:underline">{src.label}</span>
+                  <span>↗</span>
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -265,7 +514,7 @@ function ComponentCard({ comp, t }: { comp: EnrichedComponent; t: T }) {
           {comp.model_number && <span className="text-gray-300 dark:text-gray-600">{comp.model_number}</span>}
         </div>
         {comp.explanation && comp.status === 'adapter' && (
-          <p className="text-xs text-yellow-600 dark:text-yellow-600 mt-0.5">{comp.explanation}</p>
+          <p className="text-xs text-yellow-600 mt-0.5">{comp.explanation}</p>
         )}
       </div>
       <div className="flex items-center gap-3 shrink-0">

@@ -51,6 +51,17 @@ export type CompatibilityParameters = {
   chainline_mm: number | null
 }
 
+export type Source = {
+  id: number
+  title: string
+  publisher: string
+  doc_type: string
+  url: string | null
+  page_ref: string | null
+  excerpt: string | null
+  is_direct_quote: boolean
+}
+
 export const CATEGORY_ORDER = [
   'shifters',
   'crankset',

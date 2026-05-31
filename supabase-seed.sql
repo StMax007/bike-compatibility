@@ -3,6 +3,8 @@
 -- Safe to re-run: drops all tables first
 -- ============================================================
 
+DROP TABLE IF EXISTS rule_sources CASCADE;
+DROP TABLE IF EXISTS sources CASCADE;
 DROP TABLE IF EXISTS compatibility_parameters CASCADE;
 DROP TABLE IF EXISTS compatibility_rules CASCADE;
 DROP TABLE IF EXISTS components CASCADE;
@@ -359,3 +361,165 @@ INSERT INTO components (groupset_id, category, name, model_number, price_eur, af
   (18, 'crankset',         'Campagnolo Super Record Crankset 175mm', 'FC-SR800',     848.00, 'https://www.bike-components.de/de/s/?keywords=Campagnolo+Super+Record+crankset+12s'),
   (18, 'brake_calipers',   'Campagnolo Super Record Brakes (pair)',  'BR-SR18',      148.00, 'https://www.bike-components.de/de/s/?keywords=Campagnolo+Super+Record+brakes+12s'),
   (18, 'bottom_bracket',   'Campagnolo Ultra-Torque BSA BB 12s',     'BB-RM-68',      52.00, 'https://www.bike-components.de/de/s/?keywords=Campagnolo+ultra-torque+bb+12s');
+
+-- ============================================================
+-- Sources – manufacturer documentation and citations
+-- ============================================================
+
+CREATE TABLE sources (
+  id serial PRIMARY KEY,
+  title text NOT NULL,
+  publisher text NOT NULL,
+  doc_type text NOT NULL,       -- 'dealer_manual' | 'compatibility_chart' | 'support_article' | 'reference'
+  url text,
+  page_ref text,                -- e.g. "p. 12", "Road 11-speed section", NULL if full doc
+  excerpt text,                 -- direct quote or accurate paraphrase
+  is_direct_quote boolean DEFAULT false
+);
+
+-- junction: many sources can support one rule, one source can support many rules
+CREATE TABLE rule_sources (
+  rule_id integer REFERENCES compatibility_rules(id) ON DELETE CASCADE,
+  source_id integer REFERENCES sources(id) ON DELETE CASCADE,
+  PRIMARY KEY (rule_id, source_id)
+);
+
+-- ── Source records ───────────────────────────────────────────
+INSERT INTO sources (id, title, publisher, doc_type, url, page_ref, excerpt, is_direct_quote) VALUES
+
+  -- Shimano 11s: combined dealer manual covering R7000 + R8000 + R9100 derailleurs in one document
+  (1,
+   'Shimano Dealer''s Manual – RD-R7000 / RD-R8000 / RD-R9100 (DM-RARD001-04)',
+   'Shimano',
+   'dealer_manual',
+   'https://si.shimano.com/en/pdfs/dm/RARD001/DM-RARD001-04-ENG.pdf',
+   NULL,
+   'Shimano publishes a single combined dealer''s manual (DM-RARD001) covering the RD-R9100 (Dura-Ace), RD-R8000 (Ultegra), and RD-R7000 (105) rear derailleurs with identical procedures and torque specs. Publishing them in one document is Shimano''s way of confirming they belong to the same 11-speed road compatibility group.',
+   false),
+
+  -- Shimano 2024-2025 official compatibility chart – the authoritative source
+  (2,
+   'Shimano 2024–2025 Road Product Compatibility Chart (v032)',
+   'Shimano',
+   'compatibility_chart',
+   'https://productinfo.shimano.com/pdfs/product/archive/2024-2025_Compatibility_v032_en.pdf',
+   'Road – 11-speed and 12-speed sections',
+   'Shimano''s official compatibility chart (updated May 2025) groups all 11-speed road components (R7000/R8000/R9100) and all 12-speed Di2 components (R7100/R8100/R9200) into separate, internally cross-compatible families.',
+   false),
+
+  -- Shimano 12s: combined dealer manual for cassettes CS-R7100 / CS-R8100 / CS-R9200
+  (3,
+   'Shimano Dealer''s Manual – CS-R7100 / CS-R8100 / CS-R9200 Cassette (DM-RACS010-04)',
+   'Shimano',
+   'dealer_manual',
+   'https://si.shimano.com/en/pdfs/dm/RACS010/DM-RACS010-04-ENG.pdf',
+   NULL,
+   'Shimano''s combined cassette manual covers CS-R9200, CS-R8100, and CS-R7100 in a single document, confirming shared sprocket pitch and HG-EV freehub interface across the 12-speed road Di2 family.',
+   false),
+
+  -- SRAM AXS cross-tier compatibility – direct quote from official SRAM support
+  (4,
+   'SRAM Support: Is Rival eTap AXS compatible with RED or Force eTap AXS parts?',
+   'SRAM',
+   'support_article',
+   'https://support.sram.com/hc/en-us/articles/6043277756187-Is-Rival-eTap-AXS-compatible-with-SRAM-RED-or-Force-eTap-AXS-parts',
+   NULL,
+   'Many parts are cross compatible between SRAM RED, Force, and Rival eTap AXS such as 12-speed Flattop chains, 12-speed cassettes from 10-28T up to 10-36T, shifter controls, and power meters.',
+   true),
+
+  -- SRAM XDR freehub requirement – direct quote from official SRAM support
+  (5,
+   'SRAM Support: What freehub body is required for AXS road cassettes?',
+   'SRAM',
+   'support_article',
+   'https://support.sram.com/hc/en-us/articles/6526832603163-What-type-of-freehub-body-is-required-for-SRAM-RED-Force-and-Rival-eTap-AXS-road-cassettes',
+   NULL,
+   'SRAM RED, Force and Rival eTap AXS road cassettes require the XDR freehub.',
+   true),
+
+  -- SRAM 11s DoubleTap compatibility – service documentation
+  (6,
+   'SRAM Road Service Documentation – 11-speed Mechanical',
+   'SRAM',
+   'support_article',
+   'https://www.sram.com/en/service/road',
+   'Road 11-speed mechanical',
+   'SRAM Rival 22, Force 22, and Red 22 share the same DoubleTap actuation ratio and cable interface, making their rear derailleurs, shifters, and cassettes cross-compatible within the 11-speed road family.',
+   false),
+
+  -- Campagnolo documentation portal
+  (7,
+   'Campagnolo Technical Support & Documentation',
+   'Campagnolo',
+   'support_article',
+   'https://www.campagnolo.com/lu-en/technical-support-area/documentation/',
+   'Groupset compatibility section',
+   'Campagnolo 11-speed Ergopower levers, rear derailleurs, and cassettes across Chorus, Record, and Super Record share the same cable pull ratio and freehub interface, enabling full cross-compatibility within the 11-speed range.',
+   false),
+
+  -- Campagnolo N3W + 12s compatibility – bikerumor detailed article with direct quote
+  (8,
+   'Campagnolo N3W in Detail: How Campy''s New Freehub Fits All 10–13-speed Cassettes',
+   'Bike Rumor',
+   'reference',
+   'https://bikerumor.com/campagnolo-n3w-in-detail-how-campys-new-freehub-body-fits-all-10-13-speed-cassettes/',
+   NULL,
+   'The 11-29 and 11-32 ratios work with the full range of Campagnolo 12-speed mechanical groupsets—Chorus, Record, and Super Record.',
+   true),
+
+  -- Technical cable pull / derailleur ratio reference (Bikegremlin)
+  (9,
+   'Bicycle Rear Derailleur Compatibility – Shift Ratio & Cable Pull Reference',
+   'BikeGremlin',
+   'reference',
+   'https://bike.bikegremlin.com/1278/bicycle-rear-derailleur-compatibility/',
+   'Cable actuation ratios section',
+   'Shimano, SRAM and Campagnolo all use different cable-pull ratios for mechanical groupsets. Mixing parts with different cable-pull ratios will result in very poor shifting.',
+   true),
+
+  -- Wikibooks gear-changing dimensions – specific numerical values
+  (10,
+   'Bicycles / Maintenance and Repair / Gear-changing Dimensions',
+   'Wikibooks',
+   'reference',
+   'https://en.wikibooks.org/wiki/Bicycles/Maintenance_and_Repair/Gear-changing_Dimensions',
+   'Sprocket pitch and cable pull table',
+   'Reference table of cable pull and sprocket pitch values. Shimano 11-speed road: ~2.7 mm cable pull. Campagnolo 11-speed: ~2.6 mm. SRAM DoubleTap (Rival/Force/Red 22): different actuation ratio. 11-speed sprocket pitch ~3.95 mm; 12-speed ~3.58 mm.',
+   false);
+
+-- ── Rule → Source links ──────────────────────────────────────
+-- Rules 1-3 = Shimano 11s compatible pairs
+INSERT INTO rule_sources (rule_id, source_id) VALUES
+  (1, 1), (1, 2),
+  (2, 1), (2, 2),
+  (3, 1), (3, 2);
+
+-- Rules 4-6 = Shimano 12s compatible pairs
+INSERT INTO rule_sources (rule_id, source_id) VALUES
+  (4, 2), (4, 3),
+  (5, 2), (5, 3),
+  (6, 2), (6, 3);
+
+-- Rules 7-9 = SRAM 11s compatible pairs
+INSERT INTO rule_sources (rule_id, source_id) VALUES
+  (7, 6), (7, 9),
+  (8, 6), (8, 9),
+  (9, 6), (9, 9);
+
+-- Rules 10-12 = SRAM AXS compatible pairs
+INSERT INTO rule_sources (rule_id, source_id) VALUES
+  (10, 4), (10, 5),
+  (11, 4), (11, 5),
+  (12, 4), (12, 5);
+
+-- Rules 13-15 = Campagnolo 11s compatible pairs
+INSERT INTO rule_sources (rule_id, source_id) VALUES
+  (13, 7), (13, 9),
+  (14, 7), (14, 9),
+  (15, 7), (15, 9);
+
+-- Rules 16-18 = Campagnolo 12s compatible pairs
+INSERT INTO rule_sources (rule_id, source_id) VALUES
+  (16, 7), (16, 8),
+  (17, 7), (17, 8),
+  (18, 7), (18, 8);
