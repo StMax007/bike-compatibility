@@ -48,10 +48,7 @@ function CheckPageInner() {
   const [activeCategory, setActiveCategory] = useState<string>('all')
 
   useEffect(() => {
-    if (!groupsetId) {
-      router.push('/')
-      return
-    }
+    if (!groupsetId) { router.push('/'); return }
 
     async function fetchData() {
       const sb = getSupabase()
@@ -79,7 +76,6 @@ function CheckPageInner() {
       setCurrentGroupset(current)
       if (paramsRaw) setParams(paramsRaw as CompatibilityParameters)
 
-      // Build compatible groupset map
       const compatMap = new Map<number, { status: 'compatible' | 'adapter'; explanation: string | null }>()
       for (const rule of rules) {
         if (rule.groupset_a_id === Number(groupsetId))
@@ -88,7 +84,6 @@ function CheckPageInner() {
           compatMap.set(rule.groupset_a_id, { status: rule.status as 'compatible' | 'adapter', explanation: rule.explanation })
       }
 
-      // Group components by category
       const categoryMap = new Map<string, EnrichedComponent[]>()
       for (const comp of components) {
         const g = groupsets.find((x) => x.id === comp.groupset_id)
@@ -101,39 +96,23 @@ function CheckPageInner() {
           status = 'native'
         } else {
           const rule = compatMap.get(comp.groupset_id)
-          if (rule) {
-            status = rule.status
-            explanation = rule.explanation
-          } else {
-            status = 'incompatible'
-          }
+          if (rule) { status = rule.status; explanation = rule.explanation }
+          else { status = 'incompatible' }
         }
 
-        if (status === 'incompatible') continue // skip incompatible components from main list
+        if (status === 'incompatible') continue
 
         if (!categoryMap.has(comp.category)) categoryMap.set(comp.category, [])
-        categoryMap.get(comp.category)!.push({
-          ...comp,
-          groupsetName: g.name,
-          groupsetBrand: g.brand,
-          status,
-          explanation,
-        })
+        categoryMap.get(comp.category)!.push({ ...comp, groupsetName: g.name, groupsetBrand: g.brand, status, explanation })
       }
 
-      // Sort components within each category: native first, then compatible, then adapter
       const catList: CategoryData[] = CATEGORY_ORDER.filter((c) => categoryMap.has(c)).map((c) => ({
         category: c,
         components: categoryMap.get(c)!.sort((a, b) => statusOrder(a.status) - statusOrder(b.status)),
       }))
 
       setCategories(catList)
-
-      // Incompatible groupsets (those without a rule)
-      const incompatible = groupsets.filter(
-        (g) => g.id !== Number(groupsetId) && !compatMap.has(g.id)
-      )
-      setIncompatibleGroupsets(incompatible)
+      setIncompatibleGroupsets(groupsets.filter((g) => g.id !== Number(groupsetId) && !compatMap.has(g.id)))
       setLoading(false)
     }
 
@@ -148,41 +127,39 @@ function CheckPageInner() {
     )
   }
 
-  const displayCategories =
-    activeCategory === 'all' ? categories : categories.filter((c) => c.category === activeCategory)
+  const displayCategories = activeCategory === 'all' ? categories : categories.filter((c) => c.category === activeCategory)
 
   return (
     <main className="min-h-screen px-4 py-10 max-w-4xl mx-auto">
       {/* Header */}
       <div className="mb-8">
-        <Link href="/" className="text-sm text-gray-500 hover:text-gray-300 transition-colors mb-4 inline-block">
+        <Link href="/" className="text-sm text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors mb-4 inline-block">
           {t.back}
         </Link>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold">{currentGroupset?.name}</h1>
-            <p className="text-gray-400 mt-1 text-sm">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{currentGroupset?.name}</h1>
+            <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm">
               {currentGroupset && t.speed(currentGroupset.speeds)}
               {' · '}
               {currentGroupset?.type === 'electronic' ? t.electronic : t.mechanical}
               {currentGroupset?.year_from ? ` · ${currentGroupset.year_from}+` : ''}
             </p>
           </div>
-          {/* Tech specs pill */}
           {params && (
-            <div className="flex flex-wrap gap-2 text-xs text-gray-400">
+            <div className="flex flex-wrap gap-2 text-xs text-gray-500 dark:text-gray-400">
               {params.freehub_standard && (
-                <span className="border border-gray-700 rounded-full px-2.5 py-1">
+                <span className="border border-gray-200 dark:border-gray-700 rounded-full px-2.5 py-1 bg-white dark:bg-transparent">
                   {t.freehub}: {params.freehub_standard}
                 </span>
               )}
               {params.bb_standard && (
-                <span className="border border-gray-700 rounded-full px-2.5 py-1">
+                <span className="border border-gray-200 dark:border-gray-700 rounded-full px-2.5 py-1 bg-white dark:bg-transparent">
                   BB: {params.bb_standard}
                 </span>
               )}
               {params.sprocket_pitch_mm && (
-                <span className="border border-gray-700 rounded-full px-2.5 py-1">
+                <span className="border border-gray-200 dark:border-gray-700 rounded-full px-2.5 py-1 bg-white dark:bg-transparent">
                   {params.sprocket_pitch_mm}mm pitch
                 </span>
               )}
@@ -198,8 +175,8 @@ function CheckPageInner() {
             onClick={() => setActiveCategory('all')}
             className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
               activeCategory === 'all'
-                ? 'border-blue-500 bg-blue-500/10 text-blue-400'
-                : 'border-gray-700 text-gray-400 hover:border-gray-500'
+                ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                : 'border-gray-300 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500'
             }`}
           >
             {t.allCategories}
@@ -210,8 +187,8 @@ function CheckPageInner() {
               onClick={() => setActiveCategory(category)}
               className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
                 activeCategory === category
-                  ? 'border-blue-500 bg-blue-500/10 text-blue-400'
-                  : 'border-gray-700 text-gray-400 hover:border-gray-500'
+                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                  : 'border-gray-300 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500'
               }`}
             >
               {CATEGORY_LABELS[category]?.[lang] ?? category}
@@ -223,29 +200,20 @@ function CheckPageInner() {
       {/* Component categories */}
       <div className="space-y-8">
         {displayCategories.map(({ category, components }) => (
-          <CategorySection
-            key={category}
-            category={category}
-            components={components}
-            lang={lang}
-            t={t}
-          />
+          <CategorySection key={category} category={category} components={components} lang={lang} t={t} />
         ))}
       </div>
 
       {/* Incompatible summary */}
       {incompatibleGroupsets.length > 0 && (
-        <section className="mt-12 border border-gray-800 rounded-xl p-5">
-          <h2 className="font-semibold text-gray-400 mb-3 text-sm uppercase tracking-wider">
+        <section className="mt-12 border border-gray-200 dark:border-gray-800 rounded-xl p-5 bg-white dark:bg-transparent">
+          <h2 className="font-semibold text-gray-400 dark:text-gray-500 mb-3 text-sm uppercase tracking-wider">
             {t.incompatibleSummaryHeading}
           </h2>
-          <p className="text-gray-500 text-sm mb-4">{t.incompatibleSummaryNote}</p>
+          <p className="text-gray-500 dark:text-gray-500 text-sm mb-4">{t.incompatibleSummaryNote}</p>
           <div className="flex flex-wrap gap-2">
             {incompatibleGroupsets.map((g) => (
-              <span
-                key={g.id}
-                className="text-xs border border-gray-800 rounded-full px-3 py-1 text-gray-500"
-              >
+              <span key={g.id} className="text-xs border border-gray-200 dark:border-gray-800 rounded-full px-3 py-1 text-gray-400 dark:text-gray-500">
                 {g.name}
               </span>
             ))}
@@ -253,32 +221,24 @@ function CheckPageInner() {
         </section>
       )}
 
-      {/* Affiliate disclaimer */}
-      <p className="text-xs text-gray-600 mt-10 text-center">{t.affiliateDisclaimer}</p>
+      <p className="text-xs text-gray-400 dark:text-gray-600 mt-10 text-center">{t.affiliateDisclaimer}</p>
     </main>
   )
 }
 
-function CategorySection({
-  category,
-  components,
-  lang,
-  t,
-}: {
+function CategorySection({ category, components, lang, t }: {
   category: string
   components: EnrichedComponent[]
   lang: 'en' | 'de'
   t: T
 }) {
-  const label = CATEGORY_LABELS[category]?.[lang] ?? category
-
   return (
     <section>
-      <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">{label}</h2>
+      <h2 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">
+        {CATEGORY_LABELS[category]?.[lang] ?? category}
+      </h2>
       <div className="space-y-2">
-        {components.map((comp) => (
-          <ComponentCard key={comp.id} comp={comp} t={t} />
-        ))}
+        {components.map((comp) => <ComponentCard key={comp.id} comp={comp} t={t} />)}
       </div>
     </section>
   )
@@ -286,36 +246,31 @@ function CategorySection({
 
 function ComponentCard({ comp, t }: { comp: EnrichedComponent; t: T }) {
   const statusConfig: Record<ResolvedStatus, { label: string; classes: string }> = {
-    native:      { label: t.native,       classes: 'bg-blue-500/15 text-blue-400 border-blue-500/30' },
-    compatible:  { label: t.compatible,   classes: 'bg-green-500/15 text-green-400 border-green-500/30' },
-    adapter:     { label: t.needsAdapter, classes: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30' },
-    incompatible:{ label: t.incompatible, classes: 'bg-red-500/15 text-red-400 border-red-500/30' },
+    native:       { label: t.native,       classes: 'bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-500/30' },
+    compatible:   { label: t.compatible,   classes: 'bg-green-50 dark:bg-green-500/15 text-green-700 dark:text-green-400 border-green-200 dark:border-green-500/30' },
+    adapter:      { label: t.needsAdapter, classes: 'bg-yellow-50 dark:bg-yellow-500/15 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-500/30' },
+    incompatible: { label: t.incompatible, classes: 'bg-red-50 dark:bg-red-500/15 text-red-700 dark:text-red-400 border-red-200 dark:border-red-500/30' },
   }
   const cfg = statusConfig[comp.status]
 
   return (
-    <div className="flex items-center gap-3 bg-[#111] border border-gray-800 hover:border-gray-600 rounded-xl px-4 py-3 transition-colors">
-      {/* Status badge */}
+    <div className="flex items-center gap-3 bg-white dark:bg-[#111] border border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-600 rounded-xl px-4 py-3 transition-colors shadow-sm dark:shadow-none">
       <span className={`text-xs font-medium px-2 py-0.5 rounded-full border whitespace-nowrap shrink-0 ${cfg.classes}`}>
         {cfg.label}
       </span>
-
-      {/* Component info */}
       <div className="flex-1 min-w-0">
-        <div className="font-medium text-sm truncate">{comp.name}</div>
-        <div className="text-xs text-gray-500 flex gap-2 mt-0.5">
+        <div className="font-medium text-sm truncate text-gray-900 dark:text-white">{comp.name}</div>
+        <div className="text-xs text-gray-400 dark:text-gray-500 flex gap-2 mt-0.5">
           <span>{comp.groupsetName}</span>
-          {comp.model_number && <span className="text-gray-600">{comp.model_number}</span>}
+          {comp.model_number && <span className="text-gray-300 dark:text-gray-600">{comp.model_number}</span>}
         </div>
         {comp.explanation && comp.status === 'adapter' && (
-          <p className="text-xs text-yellow-600 mt-0.5">{comp.explanation}</p>
+          <p className="text-xs text-yellow-600 dark:text-yellow-600 mt-0.5">{comp.explanation}</p>
         )}
       </div>
-
-      {/* Price + buy */}
       <div className="flex items-center gap-3 shrink-0">
         {comp.price_eur != null && (
-          <span className="text-sm font-medium text-gray-200">€{comp.price_eur.toFixed(0)}</span>
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-200">€{comp.price_eur.toFixed(0)}</span>
         )}
         {comp.affiliate_url && (
           <a

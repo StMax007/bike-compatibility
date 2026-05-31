@@ -41,13 +41,13 @@ export default function Home() {
       <div className="max-w-2xl w-full text-center space-y-10">
         {/* Hero */}
         <div className="space-y-4">
-          <span className="inline-block text-blue-400 text-xs font-semibold tracking-widest uppercase border border-blue-400/30 rounded-full px-3 py-1">
+          <span className="inline-block text-blue-600 dark:text-blue-400 text-xs font-semibold tracking-widest uppercase border border-blue-300 dark:border-blue-400/30 rounded-full px-3 py-1">
             {t.badge}
           </span>
-          <h1 className="text-4xl sm:text-5xl font-bold leading-tight tracking-tight">
+          <h1 className="text-4xl sm:text-5xl font-bold leading-tight tracking-tight text-gray-900 dark:text-white">
             {t.headline}
           </h1>
-          <p className="text-gray-400 text-lg max-w-xl mx-auto">
+          <p className="text-gray-500 dark:text-gray-400 text-lg max-w-xl mx-auto">
             {t.subtitle}
           </p>
         </div>
@@ -58,7 +58,7 @@ export default function Home() {
             value={selected}
             onChange={handleSelect}
             disabled={loading}
-            className="w-full bg-[#111] border border-gray-700 hover:border-gray-500 text-white rounded-xl px-4 py-3.5 text-base focus:outline-none focus:border-blue-500 disabled:opacity-50 cursor-pointer font-[var(--font-inter)] transition-colors"
+            className="w-full bg-white dark:bg-[#111] border border-gray-300 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-500 text-gray-900 dark:text-white rounded-xl px-4 py-3.5 text-base focus:outline-none focus:border-blue-500 disabled:opacity-50 cursor-pointer font-[var(--font-inter)] transition-colors shadow-sm"
           >
             <option value="">{loading ? t.loading : t.selectPlaceholder}</option>
             {byBrand.map(({ brand, items }) =>
@@ -76,9 +76,9 @@ export default function Home() {
         </div>
 
         {/* Brand pills */}
-        <div className="flex flex-wrap justify-center gap-2 text-xs text-gray-500">
+        <div className="flex flex-wrap justify-center gap-2 text-xs text-gray-400 dark:text-gray-500">
           {BRANDS.map((b) => (
-            <span key={b} className="border border-gray-700 rounded-full px-3 py-1">
+            <span key={b} className="border border-gray-300 dark:border-gray-700 rounded-full px-3 py-1">
               {b}
             </span>
           ))}

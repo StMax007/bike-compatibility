@@ -18,9 +18,9 @@ export function Navbar() {
   ]
 
   return (
-    <header className="fixed top-0 inset-x-0 z-50 border-b border-gray-800 dark:border-gray-800 bg-[#0a0a0a]/90 dark:bg-[#0a0a0a]/90 bg-white/90 backdrop-blur-sm">
+    <header className="fixed top-0 inset-x-0 z-50 border-b border-gray-200 dark:border-gray-800 bg-white/90 dark:bg-[#0a0a0a]/90 backdrop-blur-sm">
       <nav className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
-        <Link href="/" className="font-semibold text-sm tracking-tight text-white dark:text-white">
+        <Link href="/" className="font-semibold text-sm tracking-tight text-gray-900 dark:text-white">
           BikeCompat
         </Link>
 
@@ -33,8 +33,8 @@ export function Navbar() {
                 href={href}
                 className={`px-3 py-1.5 rounded-md transition-colors ${
                   active
-                    ? 'bg-white/10 text-white'
-                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                    ? 'bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-white'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5'
                 }`}
               >
                 {label}
@@ -54,9 +54,9 @@ export function Navbar() {
           <button
             onClick={toggle}
             title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
-            className="px-2 py-1 rounded-md text-gray-400 hover:text-white transition-colors text-base"
+            className="px-2 py-1 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors text-base"
           >
-            {theme === 'dark' ? '☀' : '●'}
+            {theme === 'dark' ? '☀' : '☽'}
           </button>
         </div>
       </nav>

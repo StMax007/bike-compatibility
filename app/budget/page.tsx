@@ -47,9 +47,7 @@ export default function BudgetPage() {
     ? components
     : components.filter((c) => String(c.groupset_id) === filterGroupset)
 
-  // Group filtered components by category
-  const byCategory = CATEGORY_LABELS
-  const categories = Object.keys(byCategory).filter((cat) =>
+  const categories = Object.keys(CATEGORY_LABELS).filter((cat) =>
     filtered.some((c) => c.category === cat)
   )
 
@@ -66,22 +64,21 @@ export default function BudgetPage() {
 
   return (
     <main className="min-h-screen px-4 py-10 max-w-4xl mx-auto">
-      {/* Header */}
       <div className="mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold mb-2">{t.budgetTitle}</h1>
-        <p className="text-gray-400">{t.budgetSubtitle}</p>
+        <h1 className="text-2xl sm:text-3xl font-bold mb-2 text-gray-900 dark:text-white">{t.budgetTitle}</h1>
+        <p className="text-gray-500 dark:text-gray-400">{t.budgetSubtitle}</p>
       </div>
 
       {/* Sticky total bar */}
       {selected.size > 0 && (
-        <div className="sticky top-14 z-40 mb-6 bg-[#111] border border-gray-700 rounded-xl px-5 py-3 flex items-center justify-between gap-4 shadow-lg">
+        <div className="sticky top-14 z-40 mb-6 bg-white dark:bg-[#111] border border-gray-200 dark:border-gray-700 rounded-xl px-5 py-3 flex items-center justify-between gap-4 shadow-md dark:shadow-lg">
           <div>
-            <span className="text-sm text-gray-400">{selected.size} {t.budgetSelected}</span>
-            <div className="text-xl font-bold mt-0.5">€{total.toFixed(2)}</div>
+            <span className="text-sm text-gray-500 dark:text-gray-400">{selected.size} {t.budgetSelected}</span>
+            <div className="text-xl font-bold text-gray-900 dark:text-white mt-0.5">€{total.toFixed(2)}</div>
           </div>
           <button
             onClick={() => setSelected(new Set())}
-            className="text-sm text-gray-400 hover:text-white transition-colors"
+            className="text-sm text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors"
           >
             {t.budgetClear}
           </button>
@@ -93,7 +90,7 @@ export default function BudgetPage() {
         <select
           value={filterGroupset}
           onChange={(e) => setFilterGroupset(e.target.value)}
-          className="bg-[#111] border border-gray-700 text-white rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 cursor-pointer font-[var(--font-inter)] w-full sm:w-auto"
+          className="bg-white dark:bg-[#111] border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 cursor-pointer font-[var(--font-inter)] w-full sm:w-auto shadow-sm"
         >
           <option value="all">{t.allGroupsets}</option>
           {['Shimano', 'SRAM', 'Campagnolo'].map((brand) => {
@@ -101,9 +98,7 @@ export default function BudgetPage() {
             return items.length > 0 ? (
               <optgroup key={brand} label={brand}>
                 {items.map((g) => (
-                  <option key={g.id} value={String(g.id)}>
-                    {g.name}
-                  </option>
+                  <option key={g.id} value={String(g.id)}>{g.name}</option>
                 ))}
               </optgroup>
             ) : null
@@ -118,7 +113,7 @@ export default function BudgetPage() {
           if (!catComponents.length) return null
           return (
             <section key={cat}>
-              <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+              <h2 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">
                 {CATEGORY_LABELS[cat]?.[lang] ?? cat}
               </h2>
               <div className="space-y-1.5">
@@ -130,32 +125,27 @@ export default function BudgetPage() {
                       onClick={() => toggle(comp.id)}
                       className={`w-full flex items-center gap-3 rounded-xl px-4 py-3 border text-left transition-all ${
                         isSelected
-                          ? 'bg-blue-600/15 border-blue-500/50'
-                          : 'bg-[#111] border-gray-800 hover:border-gray-600'
+                          ? 'bg-blue-50 dark:bg-blue-600/15 border-blue-300 dark:border-blue-500/50'
+                          : 'bg-white dark:bg-[#111] border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-600 shadow-sm dark:shadow-none'
                       }`}
                     >
-                      {/* Checkbox */}
-                      <span className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center text-xs ${
-                        isSelected ? 'bg-blue-500 border-blue-500 text-white' : 'border-gray-600'
+                      <span className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center text-xs transition-colors ${
+                        isSelected
+                          ? 'bg-blue-500 border-blue-500 text-white'
+                          : 'border-gray-300 dark:border-gray-600'
                       }`}>
                         {isSelected && '✓'}
                       </span>
-
-                      {/* Info */}
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium truncate">{comp.name}</div>
-                        <div className="text-xs text-gray-500 mt-0.5 flex gap-2">
+                        <div className="text-sm font-medium truncate text-gray-900 dark:text-white">{comp.name}</div>
+                        <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 flex gap-2">
                           <span>{comp.groupsetName}</span>
-                          {comp.model_number && (
-                            <span className="text-gray-600">{comp.model_number}</span>
-                          )}
+                          {comp.model_number && <span className="text-gray-300 dark:text-gray-600">{comp.model_number}</span>}
                         </div>
                       </div>
-
-                      {/* Price */}
                       <div className="flex items-center gap-3 shrink-0">
                         {comp.price_eur != null && (
-                          <span className={`text-sm font-medium ${isSelected ? 'text-blue-300' : 'text-gray-200'}`}>
+                          <span className={`text-sm font-medium ${isSelected ? 'text-blue-600 dark:text-blue-300' : 'text-gray-700 dark:text-gray-200'}`}>
                             €{comp.price_eur.toFixed(0)}
                           </span>
                         )}
@@ -165,7 +155,7 @@ export default function BudgetPage() {
                             target="_blank"
                             rel="noopener noreferrer"
                             onClick={(e) => e.stopPropagation()}
-                            className="text-xs text-blue-500 hover:text-blue-400 transition-colors whitespace-nowrap"
+                            className="text-xs text-blue-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors whitespace-nowrap"
                           >
                             {t.buy} ↗
                           </a>
@@ -180,18 +170,17 @@ export default function BudgetPage() {
         })}
       </div>
 
-      {/* Bottom total */}
       {selected.size === 0 && (
-        <p className="text-center text-gray-600 text-sm mt-16">{t.budgetNoItems}</p>
+        <p className="text-center text-gray-400 dark:text-gray-600 text-sm mt-16">{t.budgetNoItems}</p>
       )}
       {selected.size > 0 && (
-        <div className="mt-12 border-t border-gray-800 pt-6 flex justify-between items-center">
-          <span className="text-gray-400">{t.budgetTotal}</span>
-          <span className="text-2xl font-bold">€{total.toFixed(2)}</span>
+        <div className="mt-12 border-t border-gray-200 dark:border-gray-800 pt-6 flex justify-between items-center">
+          <span className="text-gray-500 dark:text-gray-400">{t.budgetTotal}</span>
+          <span className="text-2xl font-bold text-gray-900 dark:text-white">€{total.toFixed(2)}</span>
         </div>
       )}
 
-      <p className="text-xs text-gray-600 mt-8 text-center">{t.affiliateDisclaimer}</p>
+      <p className="text-xs text-gray-400 dark:text-gray-600 mt-8 text-center">{t.affiliateDisclaimer}</p>
     </main>
   )
 }
