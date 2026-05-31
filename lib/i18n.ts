@@ -6,22 +6,56 @@ export const translations = {
     subtitle: 'Select your groupset to instantly check compatibility with Shimano, SRAM, and Campagnolo components.',
     loading: 'Loading...',
     selectPlaceholder: 'Select your groupset',
-    // check page
+    // nav
+    navHome: 'Home',
+    navCheck: 'Check',
+    navBudget: 'Budget',
+    navAbout: 'About',
+    // check page – header
     back: '← Back',
-    nativeComponents: 'Your Groupset Components',
-    compatibleFrom: 'Compatible from',
-    compatibleHeading: 'Compatible Groupsets',
-    incompatibleHeading: 'Incompatible Groupsets',
-    incompatibleSummaryHeading: 'Not Compatible',
-    incompatibleSummaryNote: 'These ecosystems use different cable pull ratios, sprocket pitch, or electronic protocols and cannot be mixed.',
-    noCompatibleComponents: 'No compatible components found for this category.',
-    filterLabel: 'Filter by category',
-    allCategories: 'All categories',
-    technicalSpecs: 'Technical Specs',
     freehub: 'Freehub',
     bbStandard: 'Bottom Bracket',
     cablePull: 'Cable Pull',
     sprocketPitch: 'Sprocket Pitch',
+    allCategories: 'All categories',
+    filterLabel: 'Filter by category',
+    technicalSpecs: 'Technical Specs',
+    // check page – compatibility proof panel
+    sourcesProofTitle: 'Why are these parts compatible? — Sources & proof',
+    sourcesShow: 'Show ▼',
+    sourcesHide: 'Hide ▲',
+    compatibleWith: 'Compatible with:',
+    directQuote: 'direct quote',
+    viewSource: 'View ↗',
+    // check page – doc type labels
+    docTypeDealer: 'Dealer Manual',
+    docTypeChart: 'Official Compatibility Chart',
+    docTypeSupport: 'Official Support Article',
+    docTypeReference: 'Technical Reference',
+    // check page – incompatible section
+    incompatibleSummaryHeading: 'Not Compatible',
+    incompatibleSummaryNote: 'These ecosystems use different cable pull ratios, sprocket pitch, or electronic protocols and cannot be mixed.',
+    incompatExpand: 'Why? ▼',
+    incompatCollapse: 'Hide ▲',
+    // dynamic incompatibility reasons
+    incompatSameSpeedTitle: (brand: string, sA: number, sB: number) =>
+      `${brand} ${sA}-speed and ${sB}-speed are not compatible`,
+    incompatSameSpeedDetail: (sA: number, sB: number) =>
+      `Sprocket pitch differs: ${sA}-speed uses ~${sA === 11 ? '3.95' : '3.58'} mm, ${sB}-speed uses ~${sB === 11 ? '3.95' : '3.58'} mm. Chains, cassettes, and derailleurs are not interchangeable between different speeds.`,
+    incompatCrossBrandTitle: (a: string, b: string) =>
+      `${a} and ${b} are not compatible`,
+    crossBrandDetailShimanoSram:
+      'Shimano and SRAM use different cable pull ratios for mechanical systems (~2.7 mm vs a different DoubleTap actuation ratio). Electronic systems (Di2 vs AXS) use incompatible wireless protocols. Mixing results in inaccurate or non-functional shifting.',
+    crossBrandDetailShimanoCampy:
+      'Shimano road uses ~2.7 mm cable pull per shift; Campagnolo Ergopower uses ~2.6 mm with a different lever geometry. Although the values are close, the shift ratios are incompatible and will cause missed or double-shifts.',
+    crossBrandDetailSramCampy:
+      'SRAM DoubleTap and Campagnolo Ergopower use fundamentally different actuation mechanisms and cable pull values. They cannot be mixed.',
+    crossBrandDetailFallback:
+      'Different brand ecosystems use incompatible cable pull ratios and/or electronic protocols.',
+    // check page – compatible heading (used in old check pages)
+    compatibleHeading: 'Compatible Groupsets',
+    incompatibleHeading: 'Incompatible Groupsets',
+    noCompatibleComponents: 'No compatible components found for this category.',
     // budget
     budgetTitle: 'Budget Calculator',
     budgetSubtitle: 'Select components to estimate the cost of your build or upgrade.',
@@ -33,11 +67,6 @@ export const translations = {
     allGroupsets: 'All groupsets',
     // about
     aboutTitle: 'About',
-    // nav
-    navHome: 'Home',
-    navCheck: 'Check',
-    navBudget: 'Budget',
-    navAbout: 'About',
     // shared
     speed: (n: number) => `${n}-speed`,
     buy: 'Check price',
@@ -48,28 +77,61 @@ export const translations = {
     mechanical: 'Mechanical',
     electronic: 'Electronic',
     affiliateDisclaimer: 'Affiliate links – we may earn a commission at no extra cost to you.',
+    nativeComponents: 'Your Groupset Components',
+    compatibleFrom: 'Compatible from',
   },
+
   de: {
     badge: 'Radsport',
     headline: 'Finde heraus, ob deine Fahrradteile kompatibel sind',
     subtitle: 'Wähle deine Schaltgruppe, um die Kompatibilität mit Shimano-, SRAM- und Campagnolo-Komponenten zu prüfen.',
     loading: 'Lädt...',
     selectPlaceholder: 'Schaltgruppe auswählen',
+    navHome: 'Start',
+    navCheck: 'Prüfen',
+    navBudget: 'Budget',
+    navAbout: 'Über',
     back: '← Zurück',
-    nativeComponents: 'Deine Schaltgruppe',
-    compatibleFrom: 'Kompatibel von',
-    compatibleHeading: 'Kompatible Schaltgruppen',
-    incompatibleHeading: 'Inkompatible Schaltgruppen',
-    incompatibleSummaryHeading: 'Nicht kompatibel',
-    incompatibleSummaryNote: 'Diese Systeme verwenden unterschiedliche Zugweg-Verhältnisse, Ritzelabstände oder elektronische Protokolle und können nicht gemischt werden.',
-    noCompatibleComponents: 'Keine kompatiblen Komponenten für diese Kategorie gefunden.',
-    filterLabel: 'Kategorie filtern',
-    allCategories: 'Alle Kategorien',
-    technicalSpecs: 'Technische Daten',
     freehub: 'Freilaufkörper',
     bbStandard: 'Tretlager',
     cablePull: 'Zugweg',
     sprocketPitch: 'Ritzelabstand',
+    allCategories: 'Alle Kategorien',
+    filterLabel: 'Kategorie filtern',
+    technicalSpecs: 'Technische Daten',
+    // Quellennachweis-Panel
+    sourcesProofTitle: 'Warum sind diese Teile kompatibel? — Quellen & Nachweise',
+    sourcesShow: 'Anzeigen ▼',
+    sourcesHide: 'Verbergen ▲',
+    compatibleWith: 'Kompatibel mit:',
+    directQuote: 'direktes Zitat',
+    viewSource: 'Ansehen ↗',
+    docTypeDealer: 'Händlerhandbuch',
+    docTypeChart: 'Offizielle Kompatibilitätstabelle',
+    docTypeSupport: 'Offizieller Support-Artikel',
+    docTypeReference: 'Technische Referenz',
+    incompatibleSummaryHeading: 'Nicht kompatibel',
+    incompatibleSummaryNote: 'Diese Systeme verwenden unterschiedliche Zugwegverhältnisse, Ritzelabstände oder Funkprotokolle und können nicht gemischt werden.',
+    incompatExpand: 'Warum? ▼',
+    incompatCollapse: 'Verbergen ▲',
+    // dynamische Inkompatibilitätsgründe
+    incompatSameSpeedTitle: (brand: string, sA: number, sB: number) =>
+      `${brand} ${sA}-fach und ${sB}-fach sind nicht kompatibel`,
+    incompatSameSpeedDetail: (sA: number, sB: number) =>
+      `Ritzelabstand unterschiedlich: ${sA}-fach verwendet ~${sA === 11 ? '3,95' : '3,58'} mm, ${sB}-fach ~${sB === 11 ? '3,95' : '3,58'} mm. Ketten, Kassetten und Schaltwerke sind zwischen verschiedenen Gangzahlen nicht austauschbar.`,
+    incompatCrossBrandTitle: (a: string, b: string) =>
+      `${a} und ${b} sind nicht kompatibel`,
+    crossBrandDetailShimanoSram:
+      'Shimano und SRAM verwenden unterschiedliche Zugwegverhältnisse (~2,7 mm vs. das DoubleTap-Betätigungsprinzip von SRAM). Elektronische Systeme (Di2 vs. AXS) nutzen inkompatible Funkprotokolle. Das Mischen führt zu ungenauem oder nicht funktionierendem Schalten.',
+    crossBrandDetailShimanoCampy:
+      'Shimano Road verwendet ~2,7 mm Zugweg pro Schaltschritt, Campagnolo Ergopower ~2,6 mm mit anderer Hebelgeometrie. Obwohl die Werte ähnlich sind, sind die Schaltverhältnisse inkompatibel und führen zu Fehlschaltungen.',
+    crossBrandDetailSramCampy:
+      'SRAM DoubleTap und Campagnolo Ergopower verwenden grundlegend unterschiedliche Betätigungsmechanismen und Zugwegwerte. Sie können nicht miteinander kombiniert werden.',
+    crossBrandDetailFallback:
+      'Unterschiedliche Markensysteme verwenden inkompatible Zugwegverhältnisse und/oder Funkprotokolle.',
+    compatibleHeading: 'Kompatible Schaltgruppen',
+    incompatibleHeading: 'Inkompatible Schaltgruppen',
+    noCompatibleComponents: 'Keine kompatiblen Komponenten für diese Kategorie gefunden.',
     budgetTitle: 'Budgetrechner',
     budgetSubtitle: 'Wähle Komponenten aus, um die Kosten deines Aufbaus oder Upgrades zu schätzen.',
     budgetTotal: 'Gesamt',
@@ -79,10 +141,6 @@ export const translations = {
     filterGroupset: 'Nach Schaltgruppe filtern',
     allGroupsets: 'Alle Schaltgruppen',
     aboutTitle: 'Über uns',
-    navHome: 'Start',
-    navCheck: 'Prüfen',
-    navBudget: 'Budget',
-    navAbout: 'Über',
     speed: (n: number) => `${n}-fach`,
     buy: 'Preis prüfen',
     compatible: '✓ Kompatibel',
@@ -92,6 +150,8 @@ export const translations = {
     mechanical: 'Mechanisch',
     electronic: 'Elektronisch',
     affiliateDisclaimer: 'Affiliate-Links – wir erhalten ggf. eine Provision ohne Mehrkosten für dich.',
+    nativeComponents: 'Deine Schaltgruppe',
+    compatibleFrom: 'Kompatibel von',
   },
 } as const
 
@@ -103,21 +163,42 @@ export type T = {
   subtitle: string
   loading: string
   selectPlaceholder: string
+  navHome: string
+  navCheck: string
+  navBudget: string
+  navAbout: string
   back: string
-  nativeComponents: string
-  compatibleFrom: string
-  compatibleHeading: string
-  incompatibleHeading: string
-  incompatibleSummaryHeading: string
-  incompatibleSummaryNote: string
-  noCompatibleComponents: string
-  filterLabel: string
-  allCategories: string
-  technicalSpecs: string
   freehub: string
   bbStandard: string
   cablePull: string
   sprocketPitch: string
+  allCategories: string
+  filterLabel: string
+  technicalSpecs: string
+  sourcesProofTitle: string
+  sourcesShow: string
+  sourcesHide: string
+  compatibleWith: string
+  directQuote: string
+  viewSource: string
+  docTypeDealer: string
+  docTypeChart: string
+  docTypeSupport: string
+  docTypeReference: string
+  incompatibleSummaryHeading: string
+  incompatibleSummaryNote: string
+  incompatExpand: string
+  incompatCollapse: string
+  incompatSameSpeedTitle: (brand: string, sA: number, sB: number) => string
+  incompatSameSpeedDetail: (sA: number, sB: number) => string
+  incompatCrossBrandTitle: (a: string, b: string) => string
+  crossBrandDetailShimanoSram: string
+  crossBrandDetailShimanoCampy: string
+  crossBrandDetailSramCampy: string
+  crossBrandDetailFallback: string
+  compatibleHeading: string
+  incompatibleHeading: string
+  noCompatibleComponents: string
   budgetTitle: string
   budgetSubtitle: string
   budgetTotal: string
@@ -127,10 +208,6 @@ export type T = {
   filterGroupset: string
   allGroupsets: string
   aboutTitle: string
-  navHome: string
-  navCheck: string
-  navBudget: string
-  navAbout: string
   speed: (n: number) => string
   buy: string
   compatible: string
@@ -140,4 +217,6 @@ export type T = {
   mechanical: string
   electronic: string
   affiliateDisclaimer: string
+  nativeComponents: string
+  compatibleFrom: string
 }

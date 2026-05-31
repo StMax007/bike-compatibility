@@ -37,86 +37,103 @@ type CompatibleGroup = {
   sources: Source[]
 }
 
-// Why two groupsets from different brands/speeds are incompatible
-function getIncompatReason(selected: Groupset, others: Groupset[]): IncompatGroup[] {
-  const groups: IncompatGroup[] = []
+// Raw data for incompatibility – no display strings, rendered by component using t
+type IncompatGroupData = {
+  groupsets: Groupset[]
+  type: 'same_brand_diff_speed' | 'cross_brand'
+  brandA: string
+  brandB: string
+  speedA: number
+  speedB: number
+  sourcePairs: { label: string; url: string }[]
+}
 
-  // Same-brand, different speed
+const CROSS_BRAND_SOURCES: { label: string; url: string }[] = [
+  {
+    label: 'Derailleur compatibility – cable pull ratios (BikeGremlin)',
+    url: 'https://bike.bikegremlin.com/1278/bicycle-rear-derailleur-compatibility/',
+  },
+  {
+    label: 'Gear-changing Dimensions (Wikibooks)',
+    url: 'https://en.wikibooks.org/wiki/Bicycles/Maintenance_and_Repair/Gear-changing_Dimensions',
+  },
+]
+
+const SPEED_SOURCES: { label: string; url: string }[] = [
+  {
+    label: 'Shimano 2024–2025 Compatibility Chart',
+    url: 'https://productinfo.shimano.com/pdfs/product/archive/2024-2025_Compatibility_v032_en.pdf',
+  },
+  {
+    label: 'Gear-changing Dimensions (Wikibooks)',
+    url: 'https://en.wikibooks.org/wiki/Bicycles/Maintenance_and_Repair/Gear-changing_Dimensions',
+  },
+]
+
+function buildIncompatGroups(selected: Groupset, others: Groupset[]): IncompatGroupData[] {
+  const groups: IncompatGroupData[] = []
+
   const sameBrandDiffSpeed = others.filter(
     (g) => g.brand === selected.brand && g.speeds !== selected.speeds
   )
   if (sameBrandDiffSpeed.length) {
-    const otherSpeed = sameBrandDiffSpeed[0].speeds
     groups.push({
       groupsets: sameBrandDiffSpeed,
-      reason: `${selected.brand} ${selected.speeds}s and ${otherSpeed}s are incompatible`,
-      detail: `Sprocket pitch differs: ${selected.speeds}-speed uses ~${selected.speeds === 11 ? '3.95' : '3.58'} mm, ${otherSpeed}-speed uses ~${otherSpeed === 11 ? '3.95' : '3.58'} mm. Chains, cassettes, and derailleurs are not interchangeable between speeds.`,
-      sources: [
-        { label: 'Shimano 2024–2025 Compatibility Chart', url: 'https://productinfo.shimano.com/pdfs/product/archive/2024-2025_Compatibility_v032_en.pdf' },
-        { label: 'Gear-changing Dimensions (Wikibooks)', url: 'https://en.wikibooks.org/wiki/Bicycles/Maintenance_and_Repair/Gear-changing_Dimensions' },
-      ],
+      type: 'same_brand_diff_speed',
+      brandA: selected.brand,
+      brandB: selected.brand,
+      speedA: selected.speeds,
+      speedB: sameBrandDiffSpeed[0].speeds,
+      sourcePairs: SPEED_SOURCES,
     })
   }
 
-  // Cross-brand
-  const brandOrder = ['Shimano', 'SRAM', 'Campagnolo']
-  const otherBrands = brandOrder.filter((b) => b !== selected.brand)
-  for (const brand of otherBrands) {
+  for (const brand of ['Shimano', 'SRAM', 'Campagnolo']) {
+    if (brand === selected.brand) continue
     const brandGroupsets = others.filter((g) => g.brand === brand)
     if (!brandGroupsets.length) continue
-
-    const detail = getCrossBrandDetail(selected.brand, brand)
     groups.push({
       groupsets: brandGroupsets,
-      reason: `${selected.brand} and ${brand} are not compatible`,
-      detail: detail.text,
-      sources: detail.sources,
+      type: 'cross_brand',
+      brandA: selected.brand,
+      brandB: brand,
+      speedA: selected.speeds,
+      speedB: 0,
+      sourcePairs: CROSS_BRAND_SOURCES,
     })
   }
 
   return groups
 }
 
-type IncompatGroup = {
-  groupsets: Groupset[]
-  reason: string
-  detail: string
-  sources: { label: string; url: string }[]
+function getCrossBrandDetail(brandA: string, brandB: string, t: T): string {
+  const key = [brandA, brandB].sort().join('|')
+  const map: Record<string, string> = {
+    'SRAM|Shimano': t.crossBrandDetailShimanoSram,
+    'Shimano|SRAM': t.crossBrandDetailShimanoSram,
+    'Campagnolo|Shimano': t.crossBrandDetailShimanoCampy,
+    'Shimano|Campagnolo': t.crossBrandDetailShimanoCampy,
+    'Campagnolo|SRAM': t.crossBrandDetailSramCampy,
+    'SRAM|Campagnolo': t.crossBrandDetailSramCampy,
+  }
+  return map[key] ?? t.crossBrandDetailFallback
 }
 
-function getCrossBrandDetail(brandA: string, brandB: string) {
-  const pairs: Record<string, { text: string; sources: { label: string; url: string }[] }> = {
-    'Shimano|SRAM': {
-      text: 'Shimano and SRAM use different cable pull ratios for mechanical systems (~2.7 mm vs a different DoubleTap actuation ratio). Electronic systems (Di2 vs AXS) use incompatible wireless protocols. Mixing results in inaccurate or non-functional shifting.',
-      sources: [
-        { label: 'Derailleur compatibility – cable pull ratios (BikeGremlin)', url: 'https://bike.bikegremlin.com/1278/bicycle-rear-derailleur-compatibility/' },
-        { label: 'Gear-changing Dimensions (Wikibooks)', url: 'https://en.wikibooks.org/wiki/Bicycles/Maintenance_and_Repair/Gear-changing_Dimensions' },
-      ],
-    },
-    'Shimano|Campagnolo': {
-      text: 'Shimano road uses ~2.7 mm cable pull per shift; Campagnolo Ergopower uses ~2.6 mm with a different lever geometry. Although the values are close, the shift ratios are incompatible and will cause missed or double-shifts.',
-      sources: [
-        { label: 'Derailleur compatibility – cable pull ratios (BikeGremlin)', url: 'https://bike.bikegremlin.com/1278/bicycle-rear-derailleur-compatibility/' },
-        { label: 'Gear-changing Dimensions (Wikibooks)', url: 'https://en.wikibooks.org/wiki/Bicycles/Maintenance_and_Repair/Gear-changing_Dimensions' },
-      ],
-    },
-    'SRAM|Campagnolo': {
-      text: 'SRAM DoubleTap and Campagnolo Ergopower use fundamentally different actuation mechanisms and cable pull values. They cannot be mixed.',
-      sources: [
-        { label: 'Derailleur compatibility – cable pull ratios (BikeGremlin)', url: 'https://bike.bikegremlin.com/1278/bicycle-rear-derailleur-compatibility/' },
-      ],
-    },
+function getDocTypeLabel(docType: string, t: T): string {
+  const map: Record<string, string> = {
+    dealer_manual: t.docTypeDealer,
+    compatibility_chart: t.docTypeChart,
+    support_article: t.docTypeSupport,
+    reference: t.docTypeReference,
   }
-  const key = [brandA, brandB].sort().join('|')
-  return pairs[key] ?? {
-    text: 'Different brand ecosystems use incompatible cable pull ratios and/or electronic protocols.',
-    sources: [],
-  }
+  return map[docType] ?? docType
 }
 
 function statusOrder(s: ResolvedStatus) {
   return { native: 0, compatible: 1, adapter: 2, incompatible: 3 }[s]
 }
+
+// ─── Main page ────────────────────────────────────────────────
 
 function CheckPageInner() {
   const searchParams = useSearchParams()
@@ -128,7 +145,7 @@ function CheckPageInner() {
   const [categories, setCategories] = useState<CategoryData[]>([])
   const [params, setParams] = useState<CompatibilityParameters | null>(null)
   const [compatGroups, setCompatGroups] = useState<CompatibleGroup[]>([])
-  const [incompatGroups, setIncompatGroups] = useState<IncompatGroup[]>([])
+  const [incompatGroups, setIncompatGroups] = useState<IncompatGroupData[]>([])
   const [loading, setLoading] = useState(true)
   const [activeCategory, setActiveCategory] = useState<string>('all')
   const [sourcesOpen, setSourcesOpen] = useState(false)
@@ -177,15 +194,10 @@ function CheckPageInner() {
       // Build compatMap: groupset_id → {rule, sources}
       const compatMap = new Map<number, { rule: CompatibilityRule; sources: Source[] }>()
       for (const rule of rules) {
-        const otherId = rule.groupset_a_id === Number(groupsetId)
-          ? rule.groupset_b_id
-          : rule.groupset_a_id
-        if (rule.groupset_a_id === Number(groupsetId) || rule.groupset_b_id === Number(groupsetId)) {
-          compatMap.set(otherId, {
-            rule,
-            sources: sourcesByRule.get(rule.id) ?? [],
-          })
-        }
+        if (rule.groupset_a_id === Number(groupsetId))
+          compatMap.set(rule.groupset_b_id, { rule, sources: sourcesByRule.get(rule.id) ?? [] })
+        if (rule.groupset_b_id === Number(groupsetId))
+          compatMap.set(rule.groupset_a_id, { rule, sources: sourcesByRule.get(rule.id) ?? [] })
       }
 
       // Group compatible groupsets by shared explanation
@@ -226,9 +238,8 @@ function CheckPageInner() {
       }))
       setCategories(catList)
 
-      // Incompatible groupsets grouped by reason
       const incompatible = groupsets.filter((g) => g.id !== Number(groupsetId) && !compatMap.has(g.id))
-      setIncompatGroups(getIncompatReason(current, incompatible))
+      setIncompatGroups(buildIncompatGroups(current, incompatible))
       setLoading(false)
     }
 
@@ -286,7 +297,7 @@ function CheckPageInner() {
         </div>
       </div>
 
-      {/* ── Compatibility Proof section ── */}
+      {/* ── Compatibility proof panel ── */}
       {compatGroups.length > 0 && (
         <div className="mb-8 border border-green-200 dark:border-green-900/50 rounded-xl overflow-hidden">
           <button
@@ -294,10 +305,10 @@ function CheckPageInner() {
             className="w-full flex items-center justify-between px-5 py-3.5 bg-green-50 dark:bg-green-950/30 text-left"
           >
             <span className="text-sm font-semibold text-green-800 dark:text-green-300 flex items-center gap-2">
-              <span>📄</span> Why are these parts compatible? — Sources & proof
+              <span>📄</span> {t.sourcesProofTitle}
             </span>
             <span className="text-green-600 dark:text-green-400 text-xs font-medium">
-              {sourcesOpen ? 'Hide ▲' : 'Show ▼'}
+              {sourcesOpen ? t.sourcesHide : t.sourcesShow}
             </span>
           </button>
 
@@ -306,7 +317,7 @@ function CheckPageInner() {
               {compatGroups.map((group, i) => (
                 <div key={i} className={i > 0 ? 'pt-4' : ''}>
                   <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                    ✓ Compatible with:{' '}
+                    ✓ {t.compatibleWith}{' '}
                     {group.groupsets.map((g) => g.name).join(', ')}
                   </p>
                   {group.explanation && (
@@ -315,7 +326,7 @@ function CheckPageInner() {
                   {group.sources.length > 0 && (
                     <div className="space-y-2">
                       {group.sources.map((src) => (
-                        <SourceCard key={src.id} source={src} />
+                        <SourceCard key={src.id} source={src} t={t} />
                       ))}
                     </div>
                   )}
@@ -362,7 +373,7 @@ function CheckPageInner() {
         ))}
       </div>
 
-      {/* ── Incompatible section with reasons + sources ── */}
+      {/* ── Incompatible section ── */}
       {incompatGroups.length > 0 && (
         <section className="mt-12 space-y-4">
           <h2 className="font-semibold text-gray-400 dark:text-gray-500 text-sm uppercase tracking-wider">
@@ -379,14 +390,9 @@ function CheckPageInner() {
   )
 }
 
-function SourceCard({ source }: { source: Source }) {
-  const docTypeLabel: Record<string, string> = {
-    dealer_manual: 'Dealer Manual',
-    compatibility_chart: 'Official Compatibility Chart',
-    support_article: 'Official Support Article',
-    reference: 'Technical Reference',
-  }
+// ─── Sub-components ───────────────────────────────────────────
 
+function SourceCard({ source, t }: { source: Source; t: T }) {
   return (
     <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-3 bg-gray-50 dark:bg-[#111]">
       <div className="flex items-start justify-between gap-3 mb-1.5">
@@ -394,7 +400,7 @@ function SourceCard({ source }: { source: Source }) {
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs font-semibold text-gray-900 dark:text-white">{source.title}</span>
             <span className="text-xs px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 shrink-0">
-              {docTypeLabel[source.doc_type] ?? source.doc_type}
+              {getDocTypeLabel(source.doc_type, t)}
             </span>
           </div>
           <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
@@ -408,7 +414,7 @@ function SourceCard({ source }: { source: Source }) {
             rel="noopener noreferrer"
             className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-500 whitespace-nowrap shrink-0 font-medium"
           >
-            View ↗
+            {t.viewSource}
           </a>
         )}
       </div>
@@ -420,7 +426,9 @@ function SourceCard({ source }: { source: Source }) {
         }`}>
           {source.is_direct_quote ? `"${source.excerpt}"` : source.excerpt}
           {source.is_direct_quote && (
-            <span className="not-italic ml-1.5 text-green-600 dark:text-green-400 font-medium text-[10px] uppercase tracking-wide">direct quote</span>
+            <span className="not-italic ml-1.5 text-green-600 dark:text-green-400 font-medium text-[10px] uppercase tracking-wide">
+              {t.directQuote}
+            </span>
           )}
         </blockquote>
       )}
@@ -428,8 +436,17 @@ function SourceCard({ source }: { source: Source }) {
   )
 }
 
-function IncompatGroupCard({ group }: { group: IncompatGroup }) {
+function IncompatGroupCard({ group }: { group: IncompatGroupData }) {
+  const { t } = useLang()
   const [open, setOpen] = useState(false)
+
+  const reason = group.type === 'same_brand_diff_speed'
+    ? t.incompatSameSpeedTitle(group.brandA, group.speedA, group.speedB)
+    : t.incompatCrossBrandTitle(group.brandA, group.brandB)
+
+  const detail = group.type === 'same_brand_diff_speed'
+    ? t.incompatSameSpeedDetail(group.speedA, group.speedB)
+    : getCrossBrandDetail(group.brandA, group.brandB, t)
 
   return (
     <div className="border border-red-100 dark:border-red-900/30 rounded-xl overflow-hidden">
@@ -438,23 +455,23 @@ function IncompatGroupCard({ group }: { group: IncompatGroup }) {
         className="w-full flex items-start justify-between gap-4 px-5 py-3.5 bg-red-50/50 dark:bg-red-950/20 text-left"
       >
         <div>
-          <p className="text-sm font-medium text-red-700 dark:text-red-400">{group.reason}</p>
+          <p className="text-sm font-medium text-red-700 dark:text-red-400">{reason}</p>
           <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">
             {group.groupsets.slice(0, 4).map((g) => g.name).join(', ')}
             {group.groupsets.length > 4 ? ` +${group.groupsets.length - 4} more` : ''}
           </p>
         </div>
         <span className="text-gray-400 dark:text-gray-500 text-xs whitespace-nowrap shrink-0 mt-0.5">
-          {open ? 'Hide ▲' : 'Why? ▼'}
+          {open ? t.incompatCollapse : t.incompatExpand}
         </span>
       </button>
 
       {open && (
         <div className="px-5 py-4 bg-white dark:bg-[#1a0d0d] space-y-3">
-          <p className="text-sm text-gray-600 dark:text-gray-300">{group.detail}</p>
-          {group.sources.length > 0 && (
+          <p className="text-sm text-gray-600 dark:text-gray-300">{detail}</p>
+          {group.sourcePairs.length > 0 && (
             <div className="space-y-2 pt-1">
-              {group.sources.map((src) => (
+              {group.sourcePairs.map((src) => (
                 <a
                   key={src.url}
                   href={src.url}
