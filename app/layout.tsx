@@ -4,6 +4,7 @@ import "./globals.css";
 import { LanguageProvider } from "@/context/language";
 import { ThemeProvider } from "@/context/theme";
 import { Navbar } from "@/components/Navbar";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
@@ -27,6 +28,7 @@ export default function RootLayout({
             <div className="pt-14">{children}</div>
           </LanguageProvider>
         </ThemeProvider>
+        <SpeedInsights />
       </body>
     </html>
   );
