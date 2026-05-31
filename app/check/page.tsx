@@ -2,26 +2,50 @@
 
 import { useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { getSupabase, type Groupset, type Component, type CompatibilityRule } from '@/lib/supabase'
 import { Suspense } from 'react'
+import {
+  getSupabase,
+  type Groupset,
+  type Component,
+  type CompatibilityRule,
+  type CompatibilityParameters,
+  CATEGORY_ORDER,
+  CATEGORY_LABELS,
+} from '@/lib/supabase'
 import { useLang } from '@/context/language'
+import type { T } from '@/lib/i18n'
+import Link from 'next/link'
 
-type GroupsetWithComponents = Groupset & {
-  components: Component[]
-  status: 'compatible' | 'adapter' | 'incompatible'
-  note: string | null
+type ResolvedStatus = 'native' | 'compatible' | 'adapter' | 'incompatible'
+
+type EnrichedComponent = Component & {
+  groupsetName: string
+  groupsetBrand: string
+  status: ResolvedStatus
+  explanation: string | null
+}
+
+type CategoryData = {
+  category: string
+  components: EnrichedComponent[]
+}
+
+function statusOrder(s: ResolvedStatus) {
+  return { native: 0, compatible: 1, adapter: 2, incompatible: 3 }[s]
 }
 
 function CheckPageInner() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const { t } = useLang()
+  const { t, lang } = useLang()
   const groupsetId = searchParams.get('groupset')
 
   const [currentGroupset, setCurrentGroupset] = useState<Groupset | null>(null)
-  const [compatible, setCompatible] = useState<GroupsetWithComponents[]>([])
-  const [incompatible, setIncompatible] = useState<GroupsetWithComponents[]>([])
+  const [categories, setCategories] = useState<CategoryData[]>([])
+  const [params, setParams] = useState<CompatibilityParameters | null>(null)
+  const [incompatibleGroupsets, setIncompatibleGroupsets] = useState<Groupset[]>([])
   const [loading, setLoading] = useState(true)
+  const [activeCategory, setActiveCategory] = useState<string>('all')
 
   useEffect(() => {
     if (!groupsetId) {
@@ -31,59 +55,85 @@ function CheckPageInner() {
 
     async function fetchData() {
       const sb = getSupabase()
-      const [{ data: groupsetsRaw }, { data: rulesRaw }, { data: componentsRaw }] = await Promise.all([
+      const [
+        { data: groupsetsRaw },
+        { data: rulesRaw },
+        { data: componentsRaw },
+        { data: paramsRaw },
+      ] = await Promise.all([
         sb.from('groupsets').select('*'),
         sb.from('compatibility_rules').select('*'),
         sb.from('components').select('*'),
+        sb.from('compatibility_parameters').select('*').eq('groupset_id', Number(groupsetId)).single(),
       ])
 
-      if (!groupsetsRaw || !rulesRaw || !componentsRaw) return
+      if (!groupsetsRaw || !componentsRaw) return
 
       const groupsets = groupsetsRaw as Groupset[]
-      const rules = rulesRaw as CompatibilityRule[]
+      const rules = (rulesRaw ?? []) as CompatibilityRule[]
       const components = componentsRaw as Component[]
 
       const current = groupsets.find((g) => g.id === Number(groupsetId))
-      if (!current) {
-        router.push('/')
-        return
-      }
+      if (!current) { router.push('/'); return }
+
       setCurrentGroupset(current)
+      if (paramsRaw) setParams(paramsRaw as CompatibilityParameters)
 
-      const otherGroupsets = groupsets.filter((g) => g.id !== Number(groupsetId))
-      const ruleMap = new Map<number, CompatibilityRule>()
-      for (const rule of rules as CompatibilityRule[]) {
-        if (rule.groupset_a_id === Number(groupsetId)) ruleMap.set(rule.groupset_b_id, rule)
-        if (rule.groupset_b_id === Number(groupsetId)) ruleMap.set(rule.groupset_a_id, rule)
+      // Build compatible groupset map
+      const compatMap = new Map<number, { status: 'compatible' | 'adapter'; explanation: string | null }>()
+      for (const rule of rules) {
+        if (rule.groupset_a_id === Number(groupsetId))
+          compatMap.set(rule.groupset_b_id, { status: rule.status as 'compatible' | 'adapter', explanation: rule.explanation })
+        if (rule.groupset_b_id === Number(groupsetId))
+          compatMap.set(rule.groupset_a_id, { status: rule.status as 'compatible' | 'adapter', explanation: rule.explanation })
       }
 
-      const compMap = new Map<number, Component[]>()
-      for (const comp of components as Component[]) {
-        if (!compMap.has(comp.groupset_id)) compMap.set(comp.groupset_id, [])
-        compMap.get(comp.groupset_id)!.push(comp)
-      }
+      // Group components by category
+      const categoryMap = new Map<string, EnrichedComponent[]>()
+      for (const comp of components) {
+        const g = groupsets.find((x) => x.id === comp.groupset_id)
+        if (!g) continue
 
-      const compatibleList: GroupsetWithComponents[] = []
-      const incompatibleList: GroupsetWithComponents[] = []
+        let status: ResolvedStatus
+        let explanation: string | null = null
 
-      for (const g of otherGroupsets) {
-        const rule = ruleMap.get(g.id)
-        const status = rule?.status ?? 'incompatible'
-        const entry: GroupsetWithComponents = {
-          ...g,
-          components: compMap.get(g.id) ?? [],
-          status: status as 'compatible' | 'adapter' | 'incompatible',
-          note: rule?.note ?? null,
-        }
-        if (status === 'compatible' || status === 'adapter') {
-          compatibleList.push(entry)
+        if (comp.groupset_id === Number(groupsetId)) {
+          status = 'native'
         } else {
-          incompatibleList.push(entry)
+          const rule = compatMap.get(comp.groupset_id)
+          if (rule) {
+            status = rule.status
+            explanation = rule.explanation
+          } else {
+            status = 'incompatible'
+          }
         }
+
+        if (status === 'incompatible') continue // skip incompatible components from main list
+
+        if (!categoryMap.has(comp.category)) categoryMap.set(comp.category, [])
+        categoryMap.get(comp.category)!.push({
+          ...comp,
+          groupsetName: g.name,
+          groupsetBrand: g.brand,
+          status,
+          explanation,
+        })
       }
 
-      setCompatible(compatibleList)
-      setIncompatible(incompatibleList)
+      // Sort components within each category: native first, then compatible, then adapter
+      const catList: CategoryData[] = CATEGORY_ORDER.filter((c) => categoryMap.has(c)).map((c) => ({
+        category: c,
+        components: categoryMap.get(c)!.sort((a, b) => statusOrder(a.status) - statusOrder(b.status)),
+      }))
+
+      setCategories(catList)
+
+      // Incompatible groupsets (those without a rule)
+      const incompatible = groupsets.filter(
+        (g) => g.id !== Number(groupsetId) && !compatMap.has(g.id)
+      )
+      setIncompatibleGroupsets(incompatible)
       setLoading(false)
     }
 
@@ -98,105 +148,186 @@ function CheckPageInner() {
     )
   }
 
+  const displayCategories =
+    activeCategory === 'all' ? categories : categories.filter((c) => c.category === activeCategory)
+
   return (
-    <main className="min-h-screen px-4 py-12 max-w-3xl mx-auto space-y-10">
-      <div>
-        <button
-          onClick={() => router.push('/')}
-          className="text-sm text-gray-400 hover:text-white mb-6 inline-block"
-        >
+    <main className="min-h-screen px-4 py-10 max-w-4xl mx-auto">
+      {/* Header */}
+      <div className="mb-8">
+        <Link href="/" className="text-sm text-gray-500 hover:text-gray-300 transition-colors mb-4 inline-block">
           {t.back}
-        </button>
-        <h1 className="text-3xl font-bold">{currentGroupset?.name}</h1>
-        <p className="text-gray-400 mt-1">{currentGroupset && t.speed(currentGroupset.speeds)} · {currentGroupset?.generation}</p>
+        </Link>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold">{currentGroupset?.name}</h1>
+            <p className="text-gray-400 mt-1 text-sm">
+              {currentGroupset && t.speed(currentGroupset.speeds)}
+              {' · '}
+              {currentGroupset?.type === 'electronic' ? t.electronic : t.mechanical}
+              {currentGroupset?.year_from ? ` · ${currentGroupset.year_from}+` : ''}
+            </p>
+          </div>
+          {/* Tech specs pill */}
+          {params && (
+            <div className="flex flex-wrap gap-2 text-xs text-gray-400">
+              {params.freehub_standard && (
+                <span className="border border-gray-700 rounded-full px-2.5 py-1">
+                  {t.freehub}: {params.freehub_standard}
+                </span>
+              )}
+              {params.bb_standard && (
+                <span className="border border-gray-700 rounded-full px-2.5 py-1">
+                  BB: {params.bb_standard}
+                </span>
+              )}
+              {params.sprocket_pitch_mm && (
+                <span className="border border-gray-700 rounded-full px-2.5 py-1">
+                  {params.sprocket_pitch_mm}mm pitch
+                </span>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
-      {compatible.length > 0 && (
-        <section>
-          <h2 className="text-xl font-semibold text-green-400 mb-4">{t.compatibleHeading}</h2>
-          <div className="space-y-4">
-            {compatible.map((g) => (
-              <GroupsetCard key={g.id} groupset={g} variant="compatible" t={t} />
+      {/* Category filter tabs */}
+      {categories.length > 1 && (
+        <div className="flex flex-wrap gap-1.5 mb-8">
+          <button
+            onClick={() => setActiveCategory('all')}
+            className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+              activeCategory === 'all'
+                ? 'border-blue-500 bg-blue-500/10 text-blue-400'
+                : 'border-gray-700 text-gray-400 hover:border-gray-500'
+            }`}
+          >
+            {t.allCategories}
+          </button>
+          {categories.map(({ category }) => (
+            <button
+              key={category}
+              onClick={() => setActiveCategory(category)}
+              className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                activeCategory === category
+                  ? 'border-blue-500 bg-blue-500/10 text-blue-400'
+                  : 'border-gray-700 text-gray-400 hover:border-gray-500'
+              }`}
+            >
+              {CATEGORY_LABELS[category]?.[lang] ?? category}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Component categories */}
+      <div className="space-y-8">
+        {displayCategories.map(({ category, components }) => (
+          <CategorySection
+            key={category}
+            category={category}
+            components={components}
+            lang={lang}
+            t={t}
+          />
+        ))}
+      </div>
+
+      {/* Incompatible summary */}
+      {incompatibleGroupsets.length > 0 && (
+        <section className="mt-12 border border-gray-800 rounded-xl p-5">
+          <h2 className="font-semibold text-gray-400 mb-3 text-sm uppercase tracking-wider">
+            {t.incompatibleSummaryHeading}
+          </h2>
+          <p className="text-gray-500 text-sm mb-4">{t.incompatibleSummaryNote}</p>
+          <div className="flex flex-wrap gap-2">
+            {incompatibleGroupsets.map((g) => (
+              <span
+                key={g.id}
+                className="text-xs border border-gray-800 rounded-full px-3 py-1 text-gray-500"
+              >
+                {g.name}
+              </span>
             ))}
           </div>
         </section>
       )}
 
-      {incompatible.length > 0 && (
-        <section>
-          <h2 className="text-xl font-semibold text-red-400 mb-4">{t.incompatibleHeading}</h2>
-          <div className="space-y-4">
-            {incompatible.map((g) => (
-              <GroupsetCard key={g.id} groupset={g} variant="incompatible" t={t} />
-            ))}
-          </div>
-        </section>
-      )}
+      {/* Affiliate disclaimer */}
+      <p className="text-xs text-gray-600 mt-10 text-center">{t.affiliateDisclaimer}</p>
     </main>
   )
 }
 
-function GroupsetCard({
-  groupset,
-  variant,
+function CategorySection({
+  category,
+  components,
+  lang,
   t,
 }: {
-  groupset: GroupsetWithComponents
-  variant: 'compatible' | 'incompatible'
-  t: import('@/lib/i18n').T
+  category: string
+  components: EnrichedComponent[]
+  lang: 'en' | 'de'
+  t: T
 }) {
-  const borderColor = variant === 'compatible' ? 'border-green-800' : 'border-red-900'
-  const badgeBg = variant === 'compatible' ? 'bg-green-900/50 text-green-300' : 'bg-red-900/50 text-red-300'
-  const badgeText = variant === 'compatible'
-    ? groupset.status === 'adapter' ? t.needsAdapter : t.compatible
-    : t.incompatible
+  const label = CATEGORY_LABELS[category]?.[lang] ?? category
 
   return (
-    <div className={`rounded-xl border ${borderColor} bg-[#111] p-5 space-y-4`}>
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h3 className="font-semibold text-lg">{groupset.name}</h3>
-          <p className="text-gray-400 text-sm">{t.speed(groupset.speeds)} · {groupset.generation}</p>
-          {groupset.note && <p className="text-gray-400 text-sm mt-1">{groupset.note}</p>}
+    <section>
+      <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">{label}</h2>
+      <div className="space-y-2">
+        {components.map((comp) => (
+          <ComponentCard key={comp.id} comp={comp} t={t} />
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function ComponentCard({ comp, t }: { comp: EnrichedComponent; t: T }) {
+  const statusConfig: Record<ResolvedStatus, { label: string; classes: string }> = {
+    native:      { label: t.native,       classes: 'bg-blue-500/15 text-blue-400 border-blue-500/30' },
+    compatible:  { label: t.compatible,   classes: 'bg-green-500/15 text-green-400 border-green-500/30' },
+    adapter:     { label: t.needsAdapter, classes: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30' },
+    incompatible:{ label: t.incompatible, classes: 'bg-red-500/15 text-red-400 border-red-500/30' },
+  }
+  const cfg = statusConfig[comp.status]
+
+  return (
+    <div className="flex items-center gap-3 bg-[#111] border border-gray-800 hover:border-gray-600 rounded-xl px-4 py-3 transition-colors">
+      {/* Status badge */}
+      <span className={`text-xs font-medium px-2 py-0.5 rounded-full border whitespace-nowrap shrink-0 ${cfg.classes}`}>
+        {cfg.label}
+      </span>
+
+      {/* Component info */}
+      <div className="flex-1 min-w-0">
+        <div className="font-medium text-sm truncate">{comp.name}</div>
+        <div className="text-xs text-gray-500 flex gap-2 mt-0.5">
+          <span>{comp.groupsetName}</span>
+          {comp.model_number && <span className="text-gray-600">{comp.model_number}</span>}
         </div>
-        <span className={`text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap ${badgeBg}`}>
-          {badgeText}
-        </span>
+        {comp.explanation && comp.status === 'adapter' && (
+          <p className="text-xs text-yellow-600 mt-0.5">{comp.explanation}</p>
+        )}
       </div>
 
-      {groupset.components.length > 0 && (
-        <div className="space-y-2">
-          {groupset.components.map((comp) => (
-            <div
-              key={comp.id}
-              className="flex items-center justify-between gap-4 text-sm bg-[#1a1a1a] rounded-lg px-4 py-3"
-            >
-              <div className="min-w-0">
-                <span className="text-gray-400 capitalize">{comp.category.replace('_', ' ')}: </span>
-                <span className="font-medium">{comp.name}</span>
-                {comp.model_number && (
-                  <span className="text-gray-500 ml-2 text-xs">{comp.model_number}</span>
-                )}
-              </div>
-              <div className="flex items-center gap-3 shrink-0">
-                {comp.price_eur && (
-                  <span className="text-gray-300">€{comp.price_eur.toFixed(2)}</span>
-                )}
-                {comp.affiliate_url && (
-                  <a
-                    href={comp.affiliate_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
-                  >
-                    {t.buy}
-                  </a>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      {/* Price + buy */}
+      <div className="flex items-center gap-3 shrink-0">
+        {comp.price_eur != null && (
+          <span className="text-sm font-medium text-gray-200">€{comp.price_eur.toFixed(0)}</span>
+        )}
+        {comp.affiliate_url && (
+          <a
+            href={comp.affiliate_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
+          >
+            {t.buy}
+          </a>
+        )}
+      </div>
     </div>
   )
 }
