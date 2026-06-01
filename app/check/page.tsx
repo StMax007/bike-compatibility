@@ -14,7 +14,7 @@ import {
   CATEGORY_LABELS,
 } from '@/lib/supabase'
 import { useLang } from '@/context/language'
-import type { T } from '@/lib/i18n'
+import type { T, Lang } from '@/lib/i18n'
 import Link from 'next/link'
 
 type ResolvedStatus = 'native' | 'compatible' | 'adapter' | 'incompatible'
@@ -495,7 +495,7 @@ function IncompatGroupCard({ group }: { group: IncompatGroupData }) {
 function CategorySection({ category, components, lang, t }: {
   category: string
   components: EnrichedComponent[]
-  lang: 'en' | 'de'
+  lang: Lang
   t: T
 }) {
   return (

@@ -44,13 +44,18 @@ export function Navbar() {
         </div>
 
         <div className="flex items-center gap-1">
-          <button
-            onClick={() => setLang(lang === 'en' ? 'de' : 'en')}
-            title={lang === 'en' ? 'Deutsch' : 'English'}
-            className="text-lg px-2 py-1 rounded-md opacity-60 hover:opacity-100 transition-opacity"
-          >
-            {lang === 'en' ? '🇩🇪' : '🇬🇧'}
-          </button>
+          {([['en', '🇬🇧'], ['de', '🇩🇪'], ['fr', '🇫🇷']] as const).map(([l, flag]) => (
+            <button
+              key={l}
+              onClick={() => setLang(l)}
+              title={l === 'en' ? 'English' : l === 'de' ? 'Deutsch' : 'Français'}
+              className={`text-lg px-1.5 py-1 rounded-md transition-opacity ${
+                lang === l ? 'opacity-100' : 'opacity-35 hover:opacity-70'
+              }`}
+            >
+              {flag}
+            </button>
+          ))}
           <button
             onClick={toggle}
             title={theme === 'dark' ? 'Light mode' : 'Dark mode'}

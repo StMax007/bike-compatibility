@@ -73,13 +73,13 @@ export const CATEGORY_ORDER = [
   'bottom_bracket',
 ] as const
 
-export const CATEGORY_LABELS: Record<string, { en: string; de: string }> = {
-  shifters:         { en: 'Shifters / Brake Levers', de: 'Schalthebel / Bremshebel' },
-  crankset:         { en: 'Crankset',                de: 'Kurbel' },
-  front_derailleur: { en: 'Front Derailleur',         de: 'Umwerfer' },
-  rear_derailleur:  { en: 'Rear Derailleur',          de: 'Schaltwerk' },
-  cassette:         { en: 'Cassette',                 de: 'Kassette' },
-  chain:            { en: 'Chain',                    de: 'Kette' },
-  brake_calipers:   { en: 'Brake Calipers',           de: 'Bremssättel' },
-  bottom_bracket:   { en: 'Bottom Bracket',           de: 'Tretlager' },
+export const CATEGORY_LABELS: Record<string, { en: string; de: string; fr: string }> = {
+  shifters:         { en: 'Shifters / Brake Levers', de: 'Schalthebel / Bremshebel', fr: 'Manettes / Leviers de frein' },
+  crankset:         { en: 'Crankset',                de: 'Kurbel',                   fr: 'Pédalier' },
+  front_derailleur: { en: 'Front Derailleur',         de: 'Umwerfer',                 fr: 'Dérailleur avant' },
+  rear_derailleur:  { en: 'Rear Derailleur',          de: 'Schaltwerk',               fr: 'Dérailleur arrière' },
+  cassette:         { en: 'Cassette',                 de: 'Kassette',                 fr: 'Cassette' },
+  chain:            { en: 'Chain',                    de: 'Kette',                    fr: 'Chaîne' },
+  brake_calipers:   { en: 'Brake Calipers',           de: 'Bremssättel',              fr: 'Étriers de frein' },
+  bottom_bracket:   { en: 'Bottom Bracket',           de: 'Tretlager',                fr: 'Boîtier de pédalier' },
 }
